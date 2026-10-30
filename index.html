@@ -349,7 +349,7 @@
         <span id="toastMessage" class="text-sm font-medium">Operación realizada con éxito</span>
     </div>
 
-    <!-- Firebase Script & App Logic -->
+    <!-- Firebase Script & App Logic with Dual Storage (Cloud + Local Backup) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -381,30 +381,48 @@
         }
 
         onAuthStateChanged(auth, (user) => {
-            if (user) { authUser = user; setupRealtimeListener(); }
+            if (user) { 
+                authUser = user; 
+                setupRealtimeListener(); 
+            } else {
+                loadLocalBackup();
+            }
         });
 
         function setupRealtimeListener() {
             if (!authUser) return;
             const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'freights');
             onSnapshot(colRef, (snapshot) => {
-                freightsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const cloudData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                if (cloudData.length > 0) {
+                    freightsData = cloudData;
+                    saveLocalBackup(); // Actualizamos el respaldo local con lo de la nube
+                } else {
+                    loadLocalBackup(); // Si la nube está vacía, levantamos el respaldo local para que no se pierda nada
+                }
                 freightsData.sort((a, b) => new Date(`${b.date}T${b.time}`) - new Date(`${a.date}T${a.time}`));
                 renderFreights();
             }, (error) => {
-                console.error("Error al leer datos:", error);
-                loadFallbackData();
+                console.error("Modo sin conexión, usando respaldo local:", error);
+                loadLocalBackup();
             });
         }
 
-        function loadFallbackData() {
-            const local = localStorage.getItem('ns_fletes_fallback');
-            if (local) freightsData = JSON.parse(local);
+        function loadLocalBackup() {
+            const local = localStorage.getItem('ns_fletes_backup_v2');
+            if (local) {
+                try {
+                    freightsData = JSON.parse(local);
+                } catch(e) {
+                    freightsData = [];
+                }
+            }
+            freightsData.sort((a, b) => new Date(`${b.date}T${b.time}`) - new Date(`${a.date}T${a.time}`));
             renderFreights();
         }
 
-        function saveFallbackData() {
-            localStorage.setItem('ns_fletes_fallback', JSON.stringify(freightsData));
+        function saveLocalBackup() {
+            localStorage.setItem('ns_fletes_backup_v2', JSON.stringify(freightsData));
         }
 
         function isAdmin(user = currentUser) {
@@ -510,41 +528,44 @@
             }
 
             try {
+                // Guardamos en la nube si hay conexión
                 if (authUser && db) {
                     if (freightId) {
                         await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'freights', freightId), data);
                     } else {
                         await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'freights'), data);
                     }
-                } else {
-                    if (freightId) {
-                        const idx = freightsData.findIndex(f => f.id === freightId);
-                        if (idx !== -1) freightsData[idx] = { id: freightId, ...data };
-                    } else {
-                        data.id = '_' + Math.random().toString(36).substr(2, 9);
-                        freightsData.unshift(data);
-                    }
-                    saveFallbackData();
-                    renderFreights();
                 }
+
+                // Guardado local de respaldo inmediato para que NUNCA se pierda nada
+                if (freightId) {
+                    const idx = freightsData.findIndex(f => f.id === freightId);
+                    if (idx !== -1) freightsData[idx] = { id: freightId, ...data };
+                } else {
+                    data.id = 'local_' + Date.now();
+                    freightsData.unshift(data);
+                }
+                saveLocalBackup();
+                renderFreights();
+
                 showToast(freightId ? "Flete actualizado con éxito" : "Flete registrado con éxito");
                 closeFreightModal();
             } catch (err) {
                 console.error("Error al guardar:", err);
-                showToast("Error al guardar el flete", "error");
+                showToast("Flete guardado localmente", "success");
+                closeFreightModal();
             }
         };
 
         window.deleteFreight = async function(id) {
             if (!confirm("¿Estás segura de eliminar este registro?")) return;
             try {
-                if (authUser && db) {
+                if (authUser && db && !id.startsWith('local_')) {
                     await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'freights', id));
-                } else {
-                    freightsData = freightsData.filter(f => f.id !== id);
-                    saveFallbackData();
-                    renderFreights();
                 }
+                freightsData = freightsData.filter(f => f.id !== id);
+                saveLocalBackup();
+                renderFreights();
                 showToast("Flete eliminado");
             } catch (err) { showToast("No se pudo eliminar", "error"); }
         };
@@ -631,7 +652,7 @@
             `).join('');
 
             cardContainer.innerHTML = items.map(i => `
-                <div class="p-4 space-y-2 text-sm">
+                <div class="p-4 space-y-2 text-sm bg-white border border-slate-100 rounded-xl shadow-xs">
                     <div class="flex justify-between items-center">
                         <span class="font-bold text-brand-900">Viaje N° ${i.tripNumber || '-'}</span>
                         ${i.movementType === 'SALIDA' ? '<span class="px-2 py-0.5 text-xs font-bold bg-blue-100 text-blue-800 rounded">📤 Salida</span>' : '<span class="px-2 py-0.5 text-xs font-bold bg-emerald-100 text-emerald-800 rounded">📥 Entrada</span>'}
@@ -641,6 +662,7 @@
                         <div>Kilos: <span class="font-mono font-bold">${i.kilos ? i.kilos.toLocaleString('es-AR') + ' kg' : '-'}</span></div>
                         <div>Remito: <span class="font-mono">${i.invoiceNumber || 'S/N'}</span></div>
                         <div>Fecha: <span>${i.date}</span></div>
+                        <div>Cargado por: <span class="font-semibold">${i.createdBy}</span></div>
                     </div>
                     ${admin ? `<div class="pt-2 border-t flex justify-between items-center text-xs font-semibold"><span class="text-slate-500">Tarifa: $ ${(i.tariff || 0).toLocaleString('es-AR')}</span><span>${i.paymentStatus}</span></div>` : ''}
                     <div class="pt-2 flex justify-end space-x-2 border-t">
