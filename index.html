@@ -152,13 +152,22 @@
             </div>
 
             <!-- Advanced Filter Bar -->
-            <div class="pt-3 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 text-sm">
+            <div class="pt-3 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 text-sm">
                 <div>
                     <label class="block text-xs font-semibold text-slate-500 mb-1">Movimiento</label>
                     <select id="filterMovement" onchange="filterFreights()" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs outline-none">
                         <option value="ALL">Todos (Entrada/Salida)</option>
                         <option value="ENTRADA">📥 Entrada</option>
                         <option value="SALIDA">📤 Salida</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Producto</label>
+                    <select id="filterProduct" onchange="filterFreights()" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs outline-none font-medium">
+                        <option value="ALL">Todos (Gluten/Germen)</option>
+                        <option value="Gluten">Gluten</option>
+                        <option value="Germen">Germen</option>
+                        <option value="Harina de germen">Harina de germen</option>
                     </select>
                 </div>
                 <div>
@@ -180,7 +189,7 @@
                 <div class="col-span-2 sm:col-span-1 flex items-end">
                     <button onclick="clearFilters()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium p-2 rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
                         <i class="fa-solid fa-filter-circle-xmark"></i>
-                        <span>Limpiar Filtros</span>
+                        <span>Limpiar</span>
                     </button>
                 </div>
             </div>
@@ -188,11 +197,6 @@
 
         <!-- Table View / Card View -->
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div id="loadingSpinner" class="p-8 text-center text-slate-500 space-y-2">
-                <i class="fa-solid fa-spinner fa-spin text-3xl text-brand-600"></i>
-                <p class="text-sm font-medium">Sincronizando fletes de Nueva Semilla...</p>
-            </div>
-
             <div id="emptyState" class="hidden p-12 text-center space-y-3">
                 <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400 text-2xl">
                     <i class="fa-solid fa-truck-ramp-box"></i>
@@ -208,7 +212,7 @@
                             <th class="py-3 px-4">Fecha/Hora</th>
                             <th class="py-3 px-4">Tipo Movimiento</th>
                             <th class="py-3 px-4">N° Viaje</th>
-                            <th class="py-3 px-4">Producto (Gluten/Germen)</th>
+                            <th class="py-3 px-4">Producto</th>
                             <th class="py-3 px-4">Kilos</th>
                             <th class="py-3 px-4">Remito</th>
                             <th class="py-3 px-4 admin-col hidden">Tarifa ($)</th>
@@ -279,8 +283,8 @@
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Producto (Gluten, Germen...) *</label>
-                        <input type="text" id="formProduct" placeholder="Ej. Gluten, Harina de germen..." required class="w-full border border-slate-300 rounded-lg p-2 text-sm outline-none">
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Producto *</label>
+                        <input type="text" id="formProduct" placeholder="Gluten, Germen..." required class="w-full border border-slate-300 rounded-lg p-2 text-sm outline-none">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">Kilos</label>
@@ -386,7 +390,6 @@
             onSnapshot(colRef, (snapshot) => {
                 freightsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 freightsData.sort((a, b) => new Date(`${b.date}T${b.time}`) - new Date(`${a.date}T${a.time}`));
-                document.getElementById('loadingSpinner').classList.add('hidden');
                 renderFreights();
             }, (error) => {
                 console.error("Error al leer datos:", error);
@@ -397,7 +400,6 @@
         function loadFallbackData() {
             const local = localStorage.getItem('ns_fletes_fallback');
             if (local) freightsData = JSON.parse(local);
-            document.getElementById('loadingSpinner').classList.add('hidden');
             renderFreights();
         }
 
@@ -515,7 +517,6 @@
                         await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'freights'), data);
                     }
                 } else {
-                    // Modo local de respaldo por si falla la red
                     if (freightId) {
                         const idx = freightsData.findIndex(f => f.id === freightId);
                         if (idx !== -1) freightsData[idx] = { id: freightId, ...data };
@@ -552,6 +553,7 @@
         window.clearFilters = function() {
             document.getElementById('searchInput').value = '';
             document.getElementById('filterMovement').value = 'ALL';
+            document.getElementById('filterProduct').value = 'ALL';
             document.getElementById('filterDateFrom').value = '';
             document.getElementById('filterDateTo').value = '';
             document.getElementById('filterPaymentStatus').value = 'ALL';
@@ -561,23 +563,25 @@
         function getFilteredData() {
             const search = document.getElementById('searchInput').value.toLowerCase();
             const movement = document.getElementById('filterMovement').value;
+            const productFilter = document.getElementById('filterProduct').value;
             const dateFrom = document.getElementById('filterDateFrom').value;
             const dateTo = document.getElementById('filterDateTo').value;
             const status = document.getElementById('filterPaymentStatus').value;
 
             return freightsData.filter(item => {
                 const matchesMovement = movement === 'ALL' || (item.movementType || 'ENTRADA') === movement;
+                const matchesProduct = productFilter === 'ALL' || (item.product && item.product.toLowerCase().includes(productFilter.toLowerCase()));
                 const matchesSearch = !search || (item.product?.toLowerCase().includes(search) || item.tripNumber?.toLowerCase().includes(search) || item.invoiceNumber?.toLowerCase().includes(search) || item.createdBy?.toLowerCase().includes(search));
                 const matchesDateFrom = !dateFrom || item.date >= dateFrom;
                 const matchesDateTo = !dateTo || item.date <= dateTo;
                 const matchesStatus = status === 'ALL' || item.paymentStatus === status;
-                return matchesMovement && matchesSearch && matchesDateFrom && matchesDateTo && matchesStatus;
+                return matchesMovement && matchesProduct && matchesSearch && matchesDateFrom && matchesDateTo && matchesStatus;
             });
         }
 
         window.exportToExcel = function() {
             const items = getFilteredData();
-            if (items.length === 0) { showToast("No hay datos para exportar", "error"); return; }
+            if (items.length === 0) { showToast("No hay datos para exportar con los filtros seleccionados", "error"); return; }
             const admin = isAdmin();
             const formatted = items.map(i => {
                 const row = { "Fecha": i.date, "Hora": i.time, "Movimiento": i.movementType, "N° Viaje": i.tripNumber, "Producto": i.product, "Kilos": i.kilos, "Remito": i.invoiceNumber, "Cargado Por": i.createdBy };
@@ -589,7 +593,7 @@
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Fletes");
             XLSX.writeFile(wb, `Fletes_NuevaSemilla_${new Date().toISOString().slice(0,10)}.xlsx`);
-            showToast("Excel generado");
+            showToast("Excel generado con éxito");
         };
 
         function renderFreights() {
