@@ -61,18 +61,18 @@
                     </div>
                 </div>
 
-                <!-- User Selector (Predeterminado en Victoria / Cambiable) -->
+                <!-- User Selector (Predeterminado en Cristian) -->
                 <div class="flex items-center justify-between sm:justify-end gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200">
                     <div class="flex items-center space-x-2 w-full sm:w-auto">
                         <label for="currentUserSelect" class="text-xs font-semibold text-slate-600 uppercase tracking-wider pl-1 whitespace-nowrap">
-                            <i class="fa-solid fa-user-shield text-brand-700 mr-1"></i>Usuario:
+                            <i class="fa-solid fa-user-circle text-brand-700 mr-1"></i>Usuario:
                         </label>
                         <select id="currentUserSelect" onchange="promptUserSwitch(this.value)" class="bg-white text-slate-800 text-xs sm:text-sm font-semibold rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 px-3 py-1.5 shadow-sm outline-none cursor-pointer w-full sm:w-auto">
-                            <option value="Victoria" selected>Victoria (Admin)</option>
+                            <option value="Cristian" selected>Cristian (Chofer)</option>
+                            <option value="Franco">Franco (Chofer)</option>
+                            <option value="Victoria">Victoria (Admin)</option>
                             <option value="Mauricio">Mauricio (Admin)</option>
                             <option value="Judit">Judit (Admin)</option>
-                            <option value="Cristian">Cristian (Chofer)</option>
-                            <option value="Franco">Franco (Chofer)</option>
                         </select>
                     </div>
                 </div>
@@ -84,7 +84,7 @@
     <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 space-y-5">
 
         <!-- KPI Metrics Summary Cards (Solo Admins) -->
-        <div id="kpiContainer" class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div id="kpiContainer" class="hidden grid grid-cols-2 md:grid-cols-4 gap-3">
             <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
                 <div>
                     <p class="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Total Kilos</p>
@@ -364,8 +364,8 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        let currentUser = 'Victoria';
-        let previousUser = 'Victoria';
+        let currentUser = 'Cristian';
+        let previousUser = 'Cristian';
         let pendingUser = null;
         let freightsData = [];
         let authUser = null;
@@ -396,9 +396,9 @@
                 const cloudData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if (cloudData.length > 0) {
                     freightsData = cloudData;
-                    saveLocalBackup(); // Actualizamos el respaldo local con lo de la nube
+                    saveLocalBackup();
                 } else {
-                    loadLocalBackup(); // Si la nube está vacía, levantamos el respaldo local para que no se pierda nada
+                    loadLocalBackup();
                 }
                 freightsData.sort((a, b) => new Date(`${b.date}T${b.time}`) - new Date(`${a.date}T${a.time}`));
                 renderFreights();
@@ -528,7 +528,6 @@
             }
 
             try {
-                // Guardamos en la nube si hay conexión
                 if (authUser && db) {
                     if (freightId) {
                         await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'freights', freightId), data);
@@ -537,7 +536,6 @@
                     }
                 }
 
-                // Guardado local de respaldo inmediato para que NUNCA se pierda nada
                 if (freightId) {
                     const idx = freightsData.findIndex(f => f.id === freightId);
                     if (idx !== -1) freightsData[idx] = { id: freightId, ...data };
