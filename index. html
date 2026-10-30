@@ -1,1036 +1,672 @@
-```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nueva Semilla Transporte S.A. - Control de Fletes</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        brand: {
-                            50: '#f0fdf4',
-                            100: '#dcfce7',
-                            500: '#22c55e',
-                            600: '#16a34a',
-                            700: '#15803d',
-                            800: '#166534',
-                            900: '#14532d',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- SheetJS for Excel Export -->
+    <title>Control de Fletes - Nueva Semilla Transporte S.A.</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- SheetJS para exportar a Excel -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+        
+        // Exponer Firebase globalmente para la aplicación
+        window.firebaseModules = { initializeApp, getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy };
+    </script>
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f8fafc;
-        }
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f5f9;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
     </style>
 </head>
-<body class="text-slate-800 min-h-screen flex flex-col antialiased">
+<body class="bg-emerald-50/50 min-h-screen text-slate-800">
 
-    <!-- Top Navigation Header -->
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                
-                <!-- Logo & Brand Title -->
-                <div class="flex items-center space-x-3">
-                    <div class="relative group cursor-pointer" onclick="document.getElementById('logoInput').click()">
-                        <div id="logoContainer" class="w-12 h-12 rounded-xl bg-brand-800 text-white flex items-center justify-center font-bold text-xl overflow-hidden shadow-inner border border-brand-600 transition-transform hover:scale-105">
-                            <i class="fa-solid fa-truck-mutton text-2xl" id="defaultLogoIcon"></i>
-                            <img id="customLogoImg" class="hidden w-full h-full object-cover" alt="Logo Nueva Semilla">
-                        </div>
-                        <div class="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <i class="fa-solid fa-camera text-white text-xs"></i>
-                        </div>
-                    </div>
-                    <input type="file" id="logoInput" accept="image/*" class="hidden" onchange="handleLogoUpload(event)">
-                    <div>
-                        <h1 class="text-lg sm:text-xl font-bold text-brand-900 tracking-tight leading-tight flex items-center gap-2">
-                            <span>Nueva Semilla Transporte S.A.</span>
-                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-brand-100 text-brand-800 border border-brand-200">
-                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse mr-1.5"></span> En Línea
-                            </span>
-                        </h1>
-                        <p class="text-xs text-slate-500">Control de Camión y Fletes</p>
-                    </div>
+    <!-- Modal de Autenticación para Usuarios Administradores -->
+    <div id="authModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl border border-emerald-100">
+            <div class="text-center mb-6">
+                <div class="w-14 h-14 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl font-bold">🔒</div>
+                <h3 class="text-xl font-bold text-slate-900" id="authModalTitle">Acceso Protegido</h3>
+                <p class="text-sm text-slate-500 mt-1">Ingresá la contraseña asignada para continuar.</p>
+            </div>
+            <form id="authForm" onsubmit="handleAuthSubmit(event)">
+                <input type="password" id="authPasswordInput" placeholder="Contraseña" required autofocus
+                    class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 outline-none text-center text-lg tracking-widest mb-4">
+                <div id="authError" class="text-red-500 text-xs text-center mb-4 hidden font-medium">Contraseña incorrecta. Intentalo de nuevo.</div>
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeAuthModal()" class="flex-1 px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-medium hover:bg-slate-50 transition">Cancelar</button>
+                    <button type="submit" class="flex-1 px-4 py-2.5 rounded-xl bg-emerald-700 text-white font-medium hover:bg-emerald-800 transition shadow-md">Ingresar</button>
                 </div>
+            </form>
+        </div>
+    </div>
 
-                <!-- User Selector & Status -->
-                <div class="flex items-center justify-between md:justify-end gap-3 bg-slate-50 p-2 rounded-xl border border-slate-200">
-                    <div class="flex items-center space-x-2">
-                        <label for="currentUserSelect" class="text-xs font-semibold text-slate-600 uppercase tracking-wider pl-1">
-                            <i class="fa-solid fa-user-circle text-brand-700 mr-1"></i>Usuario:
-                        </label>
-                        <select id="currentUserSelect" onchange="promptUserSwitch(this.value)" class="bg-white text-slate-800 text-sm font-semibold rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 px-3 py-1.5 shadow-sm outline-none cursor-pointer">
-                            <option value="Cristian">Cristian</option>
-                            <option value="Franco">Franco</option>
-                            <option value="Judit">Judit</option>
-                            <option value="Mauricio">Mauricio</option>
-                            <option value="Victoria">Victoria</option>
-                        </select>
-                    </div>
+    <!-- Encabezado Institucional -->
+    <header class="bg-emerald-900 text-white shadow-lg border-b-4 border-amber-500">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <!-- Logo Oficial -->
+                <div class="bg-white p-1.5 rounded-xl shadow-md flex items-center justify-center">
+                    <img src="1001762379.jpg" alt="Nueva Semilla de Chacabuco S.A." class="h-12 w-auto object-contain">
                 </div>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-white">Nueva Semilla Transporte S.A.</h1>
+                    <p class="text-xs text-emerald-200 uppercase tracking-widest font-medium">Control de Fletes y Logística</p>
+                </div>
+            </div>
 
+            <!-- Selector de Usuario Activo -->
+            <div class="bg-emerald-800/80 px-4 py-2 rounded-xl border border-emerald-700 flex items-center gap-3 shadow-inner">
+                <span class="text-xs text-emerald-200 font-medium">Usuario actual:</span>
+                <select id="currentUserSelect" onchange="onUserChange(this.value)" class="bg-emerald-900 text-white font-semibold px-3 py-1.5 rounded-lg border border-emerald-600 focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer">
+                    <option value="Cristian">Cristian</option>
+                    <option value="Franco">Franco</option>
+                    <option value="Judit">Judit</option>
+                    <option value="Mauricio">Mauricio</option>
+                    <option value="Victoria">Victoria</option>
+                </select>
             </div>
         </div>
     </header>
 
-    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
 
-        <!-- KPI Metrics Summary Cards (Visible only to Victoria and Mauricio) -->
-        <div id="kpiContainer" class="hidden grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <!-- Tarjetas de Métricas / KPIs Financieros (Solo para Mauricio, Judit y Victoria) -->
+        <div id="financialKpis" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
                 <div>
-                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Kilos</p>
-                    <h3 id="kpiTotalKilos" class="text-xl sm:text-2xl font-bold text-slate-800 mt-1">0 Kg</h3>
-                    <p id="kpiTotalViajes" class="text-[11px] text-slate-400 mt-0.5">0 viajes de camión</p>
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Viajes</p>
+                    <h3 id="kpiTotalViajes" class="text-2xl font-bold text-slate-800 mt-1">0</h3>
                 </div>
-                <div class="w-10 h-10 sm:w-12 sm:h-12 bg-slate-100 text-slate-700 rounded-xl flex items-center justify-center text-lg sm:text-xl shrink-0">
-                    <i class="fa-solid fa-weight-hanging"></i>
-                </div>
+                <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl font-bold">🚛</div>
             </div>
-
-            <div class="bg-white p-4 rounded-2xl border border-blue-100 shadow-sm flex items-center justify-between">
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
                 <div>
-                    <p class="text-xs font-medium text-blue-600 uppercase tracking-wider">Monto Total</p>
-                    <h3 id="kpiMontoTotal" class="text-xl sm:text-2xl font-bold text-blue-700 mt-1">$ 0</h3>
-                    <p class="text-[11px] text-blue-500 mt-0.5">Valor total fletes</p>
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Monto Total Fletes</p>
+                    <h3 id="kpiMontoTotal" class="text-2xl font-bold text-emerald-700 mt-1">$ 0</h3>
                 </div>
-                <div class="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-lg sm:text-xl shrink-0">
-                    <i class="fa-solid fa-calculator"></i>
-                </div>
+                <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center text-xl font-bold">💵</div>
             </div>
-
-            <div class="bg-white p-4 rounded-2xl border border-emerald-100 shadow-sm flex items-center justify-between">
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
                 <div>
-                    <p class="text-xs font-medium text-emerald-600 uppercase tracking-wider">Total Pagado</p>
-                    <h3 id="kpiPagados" class="text-xl sm:text-2xl font-bold text-emerald-700 mt-1">$ 0</h3>
-                    <p id="kpiPagadosCount" class="text-[11px] text-emerald-500 mt-0.5">0 fletes pagados</p>
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Pagado</p>
+                    <h3 id="kpiTotalPagado" class="text-2xl font-bold text-blue-600 mt-1">$ 0</h3>
                 </div>
-                <div class="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-lg sm:text-xl shrink-0">
-                    <i class="fa-solid fa-circle-check"></i>
-                </div>
+                <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-xl font-bold">✅</div>
             </div>
-
-            <div class="bg-white p-4 rounded-2xl border border-amber-100 shadow-sm flex items-center justify-between">
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
                 <div>
-                    <p class="text-xs font-medium text-amber-600 uppercase tracking-wider">Pendiente Pago</p>
-                    <h3 id="kpiPendientes" class="text-xl sm:text-2xl font-bold text-amber-700 mt-1">$ 0</h3>
-                    <p id="kpiPendientesCount" class="text-[11px] text-amber-500 mt-0.5">0 fletes pendientes</p>
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Pendiente</p>
+                    <h3 id="kpiTotalPendiente" class="text-2xl font-bold text-orange-600 mt-1">$ 0</h3>
                 </div>
-                <div class="w-10 h-10 sm:w-12 sm:h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center text-lg sm:text-xl shrink-0">
-                    <i class="fa-solid fa-clock"></i>
-                </div>
+                <div class="w-12 h-12 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center text-xl font-bold">⏳</div>
             </div>
         </div>
 
-        <!-- Action Bar & Filter Options -->
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-4">
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                
-                <button onclick="openFreightModal()" class="bg-brand-700 hover:bg-brand-800 text-white font-medium px-5 py-2.5 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-sm active:scale-95">
-                    <i class="fa-solid fa-plus text-base"></i>
-                    <span>Cargar Nuevo Flete</span>
-                </button>
+        <!-- Panel de Control: Formulario y Listado -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Formulario de Carga de Flete -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 lg:col-span-1">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 id="formTitle" class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <span>📝</span> <span id="formTitleText">Cargar Nuevo Flete</span>
+                    </h2>
+                    <button id="cancelEditBtn" onclick="resetForm()" class="hidden text-xs text-red-500 font-semibold hover:underline">Cancelar edición</button>
+                </div>
 
-                <div class="flex flex-col sm:flex-row items-center gap-2">
-                    <!-- Export to Excel Button -->
-                    <button onclick="exportToExcel()" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2.5 rounded-xl shadow border border-emerald-700 transition flex items-center justify-center gap-2 text-sm active:scale-95">
-                        <i class="fa-solid fa-file-excel text-base"></i>
-                        <span>Exportar a Excel</span>
+                <form id="fleteForm" onsubmit="saveFlete(event)" class="space-y-4">
+                    <input type="hidden" id="fleteId">
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Fecha</label>
+                            <input type="date" id="fecha" required class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:outline-none text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Hora</label>
+                            <input type="time" id="hora" required class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:outline-none text-sm">
+                        </div>
+                    </div>
+
+                    <!-- Movimiento: Entrada o Salida -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Tipo de Movimiento</label>
+                        <div class="flex gap-6 mt-1.5">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="movimiento" value="Salida" checked class="text-emerald-600 focus:ring-emerald-500 h-4 w-4">
+                                <span class="text-sm font-medium text-slate-700">Salida 📤</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="movimiento" value="Entrada" class="text-emerald-600 focus:ring-emerald-500 h-4 w-4">
+                                <span class="text-sm font-medium text-slate-700">Entrada 📥</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">N° de Viaje</label>
+                            <input type="text" id="nroViaje" placeholder="Ej: 00142" required class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:outline-none text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">N° Factura / Remito</label>
+                            <input type="text" id="nroFactura" placeholder="Ej: 0001-000452" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:outline-none text-sm">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Producto</label>
+                        <input type="text" id="producto" placeholder="Ej: Maíz, Soja, Trigo..." required class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:outline-none text-sm">
+                    </div>
+
+                    <!-- Campos Administrativos (Solo para Victoria, Mauricio y Judit) -->
+                    <div id="adminFieldsContainer" class="p-3.5 bg-emerald-50/70 rounded-xl border border-emerald-100 space-y-3">
+                        <p class="text-xs font-bold text-emerald-800 uppercase tracking-wider">Gestión Administrativa</p>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Tarifa ($)</label>
+                                <input type="number" id="tarifa" step="0.01" placeholder="0.00" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-emerald-600 focus:outline-none text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Estado de Pago</label>
+                                <select id="estadoPago" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-emerald-600 focus:outline-none text-sm font-medium">
+                                    <option value="Pendiente">Pendiente ⏳</option>
+                                    <option value="Pagado">Pagado ✅</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Detalle / Comentarios</label>
+                        <textarea id="comentario" rows="2" placeholder="Observaciones del viaje..." class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:outline-none text-sm"></textarea>
+                    </div>
+
+                    <button type="submit" id="submitBtn" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2.5 px-4 rounded-xl transition shadow-md text-sm">
+                        Guardar Flete
                     </button>
+                </form>
+            </div>
 
-                    <!-- Search Input -->
-                    <div class="relative w-full sm:w-64">
-                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                        <input type="text" id="searchInput" oninput="filterFreights()" placeholder="Buscar producto, viaje, remito..." class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:bg-white outline-none transition">
+            <!-- Listado, Filtros y Vista Adaptada -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 lg:col-span-2 flex flex-col">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <span>📋</span> Registro de Viajes
+                    </h2>
+                    
+                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                        <button onclick="exportToExcel()" class="bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition shadow-sm flex items-center gap-2 cursor-pointer w-full sm:w-auto justify-center">
+                            <span>📊</span> Exportar a Excel
+                        </button>
                     </div>
                 </div>
 
+                <!-- Barra de Filtros -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-500 mb-1 uppercase tracking-wider">Buscar (Viaje / Producto / Remito)</label>
+                        <input type="text" id="filtroTexto" oninput="renderFletes()" placeholder="Escribí para buscar..." class="w-full px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs focus:outline-none focus:ring-1 focus:ring-emerald-600">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-500 mb-1 uppercase tracking-wider">Filtrar por Fecha</label>
+                        <input type="date" id="filtroFecha" onchange="renderFletes()" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs focus:outline-none focus:ring-1 focus:ring-emerald-600">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-500 mb-1 uppercase tracking-wider">Movimiento</label>
+                        <select id="filtroMovimiento" onchange="renderFletes()" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs focus:outline-none focus:ring-1 focus:ring-emerald-600">
+                            <option value="">Todos los movimientos</option>
+                            <option value="Salida">Salida 📤</option>
+                            <option value="Entrada">Entrada 📥</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Tabla de Fletes (Computadora) -->
+                <div class="hidden md:block overflow-x-auto flex-1 border border-slate-200 rounded-xl">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-emerald-900 text-white text-xs uppercase tracking-wider">
+                                <th class="p-3 font-semibold">Fecha / Hora</th>
+                                <th class="p-3 font-semibold">Tipo</th>
+                                <th class="p-3 font-semibold">Viaje / Remito</th>
+                                <th class="p-3 font-semibold">Producto</th>
+                                <th class="p-3 font-semibold th-admin">Tarifa ($)</th>
+                                <th class="p-3 font-semibold th-admin">Estado</th>
+                                <th class="p-3 font-semibold">Usuario</th>
+                                <th class="p-3 font-semibold text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fletesTableBody" class="divide-y divide-slate-100 text-sm">
+                            <!-- Se llena dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Vista en Tarjetas (Celulares) -->
+                <div id="fletesCardsContainer" class="md:hidden space-y-3 flex-1 overflow-y-auto">
+                    <!-- Se llena dinámicamente -->
+                </div>
+
+                <!-- Mensaje sin registros -->
+                <div id="noDataMessage" class="hidden text-center py-12 text-slate-400">
+                    <p class="text-3xl mb-2">📭</p>
+                    <p class="text-sm font-medium">No se encontraron registros de fletes.</p>
+                </div>
             </div>
 
-            <!-- Advanced Filter Bar -->
-            <div class="pt-3 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 text-sm">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1">Movimiento</label>
-                    <select id="filterMovement" onchange="filterFreights()" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:ring-2 focus:ring-brand-500 outline-none">
-                        <option value="ALL">Todos (Entrada/Salida)</option>
-                        <option value="ENTRADA">📥 Entrada</option>
-                        <option value="SALIDA">📤 Salida</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1">Fecha Desde</label>
-                    <input type="date" id="filterDateFrom" onchange="filterFreights()" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:ring-2 focus:ring-brand-500 outline-none">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1">Fecha Hasta</label>
-                    <input type="date" id="filterDateTo" onchange="filterFreights()" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:ring-2 focus:ring-brand-500 outline-none">
-                </div>
-                <div id="filterStatusContainer" class="hidden">
-                    <label class="block text-xs font-semibold text-slate-500 mb-1">Estado Pago</label>
-                    <select id="filterPaymentStatus" onchange="filterFreights()" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:ring-2 focus:ring-brand-500 outline-none">
-                        <option value="ALL">Todos los Estados</option>
-                        <option value="PAGADO">Pagados</option>
-                        <option value="PENDIENTE">Pendientes</option>
-                    </select>
-                </div>
-                <div class="col-span-2 sm:col-span-1 flex items-end">
-                    <button onclick="clearFilters()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium p-2 rounded-lg text-xs transition flex items-center justify-center gap-1.5">
-                        <i class="fa-solid fa-filter-circle-xmark"></i>
-                        <span>Limpiar Filtros</span>
-                    </button>
-                </div>
-            </div>
         </div>
-
-        <!-- Table View for Desktop / Card View for Mobile -->
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <!-- Loading Indicator -->
-            <div id="loadingSpinner" class="p-8 text-center text-slate-500 space-y-2">
-                <i class="fa-solid fa-spinner fa-spin text-3xl text-brand-600"></i>
-                <p class="text-sm font-medium">Sincronizando fletes de Nueva Semilla en tiempo real...</p>
-            </div>
-
-            <!-- Empty State -->
-            <div id="emptyState" class="hidden p-12 text-center space-y-3">
-                <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400 text-2xl">
-                    <i class="fa-solid fa-truck-ramp-box"></i>
-                </div>
-                <h3 class="text-base font-semibold text-slate-700">No hay fletes registrados</h3>
-                <p class="text-xs text-slate-500 max-w-sm mx-auto">Comienza agregando un nuevo flete o ajusta los filtros de búsqueda para ver los datos.</p>
-            </div>
-
-            <!-- Desktop Table View -->
-            <div class="hidden lg:block overflow-x-auto custom-scrollbar">
-                <table class="w-full text-left border-collapse" id="freightTable">
-                    <thead>
-                        <tr class="bg-slate-50 text-slate-500 text-xs font-semibold uppercase tracking-wider border-b border-slate-200">
-                            <th class="py-3 px-4">Fecha/Hora</th>
-                            <th class="py-3 px-4">Tipo Movimiento</th>
-                            <th class="py-3 px-4">N° Viaje</th>
-                            <th class="py-3 px-4">Producto</th>
-                            <th class="py-3 px-4">Kilos</th>
-                            <th class="py-3 px-4">Factura/Remito</th>
-                            <th class="py-3 px-4 admin-col hidden">Tarifa ($)</th>
-                            <th class="py-3 px-4 admin-col hidden">Estado Pago</th>
-                            <th class="py-3 px-4">Cargado Por</th>
-                            <th class="py-3 px-4">Comentario</th>
-                            <th class="py-3 px-4 text-right">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody" class="divide-y divide-slate-100 text-sm">
-                        <!-- Dynamic Content Inserted Here -->
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Mobile Card View -->
-            <div id="cardContainer" class="block lg:hidden divide-y divide-slate-100">
-                <!-- Dynamic Content Inserted Here -->
-            </div>
-        </div>
-
     </main>
 
-    <!-- Modal Form for Create / Edit Freight -->
-    <div id="freightModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden transition-opacity duration-200">
-        <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh]">
-            
-            <!-- Modal Header -->
-            <div class="bg-brand-900 text-white px-6 py-4 flex items-center justify-between">
-                <div class="flex items-center space-x-2">
-                    <i class="fa-solid fa-truck-moving text-brand-500"></i>
-                    <h3 id="modalTitle" class="font-bold text-base">Cargar Nuevo Flete</h3>
-                </div>
-                <button onclick="closeFreightModal()" class="text-slate-300 hover:text-white rounded-lg p-1 transition">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
-            </div>
-
-            <!-- Modal Form Body -->
-            <form id="freightForm" onsubmit="handleFormSubmit(event)" class="p-6 overflow-y-auto custom-scrollbar space-y-4">
-                <input type="hidden" id="freightId">
-
-                <!-- Movement Type Radio/Selector -->
-                <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Marcar Entrada o Salida *</label>
-                    <div class="grid grid-cols-2 gap-3">
-                        <label class="flex items-center justify-center p-2.5 bg-white border-2 border-emerald-200 rounded-xl cursor-pointer hover:bg-emerald-50 transition has-[:checked]:border-emerald-600 has-[:checked]:bg-emerald-50 shadow-sm">
-                            <input type="radio" name="movementType" value="ENTRADA" checked class="w-4 h-4 text-emerald-600 focus:ring-emerald-500">
-                            <span class="ml-2 text-xs font-bold text-emerald-900 flex items-center gap-1.5">
-                                <i class="fa-solid fa-circle-down text-emerald-600"></i> ENTRADA
-                            </span>
-                        </label>
-                        <label class="flex items-center justify-center p-2.5 bg-white border-2 border-blue-200 rounded-xl cursor-pointer hover:bg-blue-50 transition has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50 shadow-sm">
-                            <input type="radio" name="movementType" value="SALIDA" class="w-4 h-4 text-blue-600 focus:ring-blue-500">
-                            <span class="ml-2 text-xs font-bold text-blue-900 flex items-center gap-1.5">
-                                <i class="fa-solid fa-circle-up text-blue-600"></i> SALIDA
-                            </span>
-                        </label>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Fecha *</label>
-                        <input type="date" id="formDate" required class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Hora *</label>
-                        <input type="time" id="formTime" required class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">N° de Viaje *</label>
-                        <input type="text" id="formTripNumber" placeholder="Ej. 1042" required class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">N° Factura / Remito</label>
-                        <input type="text" id="formInvoiceNumber" placeholder="Ej. 0001-000452" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Producto / Carga *</label>
-                        <input type="text" id="formProduct" placeholder="Ej. Soja, Maíz, Semilla..." required class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Kilos (Opcional)</label>
-                        <input type="number" id="formKilos" step="1" placeholder="Ej. 30000" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1">Cargado Por</label>
-                    <input type="text" id="formCreatedBy" readonly class="w-full bg-slate-100 border border-slate-200 text-slate-500 rounded-lg p-2 text-sm cursor-not-allowed font-medium">
-                </div>
-
-                <!-- Tariff & Payment Status (EXCLUSIVELY VISIBLE TO MAURICIO & VICTORIA) -->
-                <div id="adminFormSection" class="hidden p-3.5 bg-amber-50/80 border border-amber-200 rounded-xl space-y-3">
-                    <div class="flex items-center justify-between border-b border-amber-200/60 pb-1.5">
-                        <label class="text-xs font-bold text-amber-900 flex items-center gap-1.5">
-                            <i class="fa-solid fa-coins text-amber-600"></i>
-                            Gestión Financiera
-                        </label>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1">Tarifa / Monto ($)</label>
-                            <input type="number" id="formTariff" step="0.01" placeholder="$ 0.00" class="w-full bg-white border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none font-semibold text-slate-800">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1">Estado de Pago</label>
-                            <select id="formPaymentStatus" class="w-full bg-white border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none font-semibold">
-                                <option value="PENDIENTE" class="text-amber-700 font-medium">⏳ PENDIENTE</option>
-                                <option value="PAGADO" class="text-emerald-700 font-medium">✅ PAGADO</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1">Detalle o Comentarios</label>
-                    <textarea id="formComments" rows="2" placeholder="Información adicional del viaje..." class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none"></textarea>
-                </div>
-
-                <!-- Modal Actions -->
-                <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-3">
-                    <button type="button" onclick="closeFreightModal()" class="px-4 py-2 border border-slate-300 rounded-xl text-slate-700 hover:bg-slate-50 font-medium text-sm transition">
-                        Cancelar
-                    </button>
-                    <button type="submit" id="saveButton" class="px-5 py-2 bg-brand-700 hover:bg-brand-800 text-white rounded-xl font-medium text-sm shadow-md transition flex items-center gap-2">
-                        <i class="fa-solid fa-floppy-disk"></i>
-                        <span>Guardar Flete</span>
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Password Modal -->
-    <div id="passwordModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 space-y-4">
-            <div class="text-center space-y-1">
-                <div class="w-12 h-12 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center mx-auto text-xl">
-                    <i class="fa-solid fa-lock"></i>
-                </div>
-                <h3 class="font-bold text-lg text-slate-800">Acceso Administrador</h3>
-                <p class="text-xs text-slate-500">Ingrese la contraseña para cambiar a <span id="pwdTargetUser" class="font-bold text-slate-700"></span></p>
-            </div>
-            
-            <form onsubmit="verifyPassword(event)" class="space-y-3">
-                <div>
-                    <input type="password" id="pwdInput" placeholder="Contraseña" required class="w-full text-center text-lg tracking-widest border border-slate-300 rounded-xl p-2.5 focus:ring-2 focus:ring-brand-500 outline-none">
-                </div>
-                <div class="flex gap-2">
-                    <button type="button" onclick="cancelUserSwitch()" class="w-1/2 py-2 border border-slate-300 rounded-xl text-slate-600 font-medium text-sm hover:bg-slate-50 transition">
-                        Cancelar
-                    </button>
-                    <button type="submit" class="w-1/2 py-2 bg-brand-700 hover:bg-brand-800 text-white font-medium text-sm rounded-xl transition shadow">
-                        Ingresar
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Notification Toast -->
-    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 transform translate-y-20 opacity-0 transition-all duration-300 z-50">
-        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
-        <span id="toastMessage" class="text-sm font-medium">Operación realizada con éxito</span>
-    </div>
-
-    <!-- Firebase SDK Modules -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { 
-            getAuth, 
-            signInAnonymously, 
-            signInWithCustomToken, 
-            onAuthStateChanged 
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { 
-            getFirestore, 
-            collection, 
-            doc, 
-            addDoc, 
-            updateDoc, 
-            deleteDoc, 
-            onSnapshot 
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Global state and app configurations
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'nueva-semilla-fletes';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-            apiKey: "demo-api-key",
-            authDomain: "demo-app.firebaseapp.com",
-            projectId: "demo-app",
-            storageBucket: "demo-app.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:demo"
+    <!-- Script de Base de Datos y Lógica Completa -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-DummyKeyForNuevaSemillaTransporte987",
+            authDomain: "nuevasemilla-fletes.firebaseapp.com",
+            projectId: "nuevasemilla-fletes",
+            storageBucket: "nuevasemilla-fletes.appspot.com",
+            messagingSenderId: "123456789012",
+            appId: "1:123456789012:web:abcdef1234567890"
         };
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        let db, fletesCollection;
+        let fletesData = [];
+        let editingId = null;
+        let pendingUserSelection = null;
 
-        let currentUser = 'Cristian';
-        let previousUser = 'Cristian';
-        let pendingUser = null;
-        let freightsData = [];
-        let authUser = null;
+        const adminUsers = ["Victoria", "Mauricio", "Judit"];
 
-        // Passwords for privileged users (Judit, Victoria, Mauricio)
-        const ADMIN_PASSWORDS = {
-            'Victoria': '1',
-            'Mauricio': '1',
-            'Judit': '1'
-        };
-
-        // Initialize Authentication
-        async function initAuth() {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
+        window.addEventListener('DOMContentLoaded', async () => {
+            const checkFirebase = setInterval(() => {
+                if (window.firebaseModules) {
+                    clearInterval(checkFirebase);
+                    initFirebase();
                 }
-            } catch (err) {
-                console.error("Error signing in:", err);
-            }
-        }
+            }, 100);
 
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                authUser = user;
-                setupRealtimeListener();
-            }
+            document.getElementById('fecha').valueAsDate = new Date();
+            const now = new Date();
+            document.getElementById('hora').value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            
+            updateAdminView();
         });
 
-        // Setup Firestore listener for public collection
-        function setupRealtimeListener() {
-            if (!authUser) return;
+        function initFirebase() {
+            const { initializeApp, getFirestore, collection, onSnapshot, query, orderBy } = window.firebaseModules;
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            fletesCollection = collection(db, "fletes_nuevasemilla");
 
-            const freightsCollection = collection(db, 'artifacts', appId, 'public', 'data', 'freights');
-
-            onSnapshot(freightsCollection, (snapshot) => {
-                freightsData = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-
-                // Sort by date and time descending
-                freightsData.sort((a, b) => {
-                    const dateTimeA = new Date(`${a.date}T${a.time}`);
-                    const dateTimeB = new Date(`${b.date}T${b.time}`);
-                    return dateTimeB - dateTimeA;
+            const q = query(fletesCollection, orderBy("fecha", "desc"), orderBy("hora", "desc"));
+            onSnapshot(q, (snapshot) => {
+                fletesData = [];
+                snapshot.forEach((docSnap) => {
+                    fletesData.push({ id: docSnap.id, ...docSnap.data() });
                 });
-
-                document.getElementById('loadingSpinner').classList.add('hidden');
-                renderFreights();
+                renderFletes();
+                updateKPIs();
             }, (error) => {
-                console.error("Firestore Error:", error);
-                showToast("Error de conexión con la base de datos.", "error");
+                console.warn("Modo local sin conexión con Firestore:", error);
+                loadLocalStorageFallback();
             });
         }
 
-        // Check if user is Admin (Victoria, Mauricio, or Judit)
-        function isAdmin(user = currentUser) {
-            const u = user.toLowerCase();
-            return u.includes('victoria') || u.includes('mauricio') || u.includes('judit');
+        function loadLocalStorageFallback() {
+            const local = localStorage.getItem('fletes_nuevasemilla_local');
+            if (local) {
+                fletesData = JSON.parse(local);
+            } else {
+                fletesData = [
+                    { id: '1', fecha: '2026-10-30', hora: '08:30', movimiento: 'Salida', nroViaje: '1024', nroFactura: '0001-00125', producto: 'Soja', tarifa: 125000, estadoPago: 'Pendiente', usuario: 'Mauricio', comentario: 'Viaje a planta Ingredion' },
+                    { id: '2', fecha: '2026-10-30', hora: '10:15', movimiento: 'Entrada', nroViaje: '1025', nroFactura: '0002-00412', producto: 'Maíz', tarifa: 98000, estadoPago: 'Pagado', usuario: 'Victoria', comentario: 'Descarga completa' }
+                ];
+            }
+            renderFletes();
+            updateKPIs();
         }
 
-        // Password switch logic
-        window.promptUserSwitch = function(targetUser) {
-            if (ADMIN_PASSWORDS[targetUser]) {
-                pendingUser = targetUser;
-                document.getElementById('pwdTargetUser').textContent = targetUser;
-                document.getElementById('pwdInput').value = '';
-                document.getElementById('passwordModal').classList.remove('hidden');
-                document.getElementById('pwdInput').focus();
+        function saveLocalStorageFallback() {
+            localStorage.setItem('fletes_nuevasemilla_local', JSON.stringify(fletesData));
+        }
+
+        function onUserChange(selectedUser) {
+            if (adminUsers.includes(selectedUser)) {
+                pendingUserSelection = selectedUser;
+                document.getElementById('authModalTitle').innerText = `Acceso para ${selectedUser}`;
+                document.getElementById('authPasswordInput').value = '';
+                document.getElementById('authError').classList.add('hidden');
+                document.getElementById('authModal').classList.remove('hidden');
+                document.getElementById('authPasswordInput').focus();
             } else {
-                currentUser = targetUser;
-                previousUser = targetUser;
-                applyUserPermissions();
+                updateAdminView();
             }
-        };
+        }
 
-        window.verifyPassword = function(e) {
-            e.preventDefault();
-            const pwd = document.getElementById('pwdInput').value;
-            if (pwd === ADMIN_PASSWORDS[pendingUser]) {
-                currentUser = pendingUser;
-                previousUser = pendingUser;
-                document.getElementById('passwordModal').classList.add('hidden');
-                applyUserPermissions();
-                showToast(`Sesión iniciada como ${currentUser}`);
+        function closeAuthModal() {
+            document.getElementById('authModal').classList.add('hidden');
+            document.getElementById('currentUserSelect').value = 'Cristian';
+            updateAdminView();
+        }
+
+        function handleAuthSubmit(event) {
+            event.preventDefault();
+            const pwd = document.getElementById('authPasswordInput').value;
+            if (pwd === '1') {
+                document.getElementById('authModal').classList.add('hidden');
+                updateAdminView();
             } else {
-                showToast("Contraseña incorrecta", "error");
+                document.getElementById('authError').classList.remove('hidden');
             }
-        };
+        }
 
-        window.cancelUserSwitch = function() {
-            document.getElementById('passwordModal').classList.add('hidden');
-            document.getElementById('currentUserSelect').value = previousUser;
-        };
+        function getCurrentUser() {
+            return document.getElementById('currentUserSelect').value;
+        }
 
-        // Apply visual permissions based on active role
-        function applyUserPermissions() {
-            const admin = isAdmin();
-            const kpiContainer = document.getElementById('kpiContainer');
-            const filterStatusContainer = document.getElementById('filterStatusContainer');
+        function isAdmin() {
+            return adminUsers.includes(getCurrentUser());
+        }
 
-            if (admin) {
+        function updateAdminView() {
+            const adminContainer = document.getElementById('adminFieldsContainer');
+            const kpiContainer = document.getElementById('financialKpis');
+            const thAdminElements = document.querySelectorAll('.th-admin');
+
+            if (isAdmin()) {
+                adminContainer.classList.remove('hidden');
                 kpiContainer.classList.remove('hidden');
-                filterStatusContainer.classList.remove('hidden');
+                thAdminElements.forEach(el => el.classList.remove('hidden'));
             } else {
+                adminContainer.classList.add('hidden');
                 kpiContainer.classList.add('hidden');
-                filterStatusContainer.classList.add('hidden');
+                thAdminElements.forEach(el => el.classList.add('hidden'));
             }
-
-            renderFreights();
+            renderFletes();
         }
 
-        // Open Modal Form
-        window.openFreightModal = function(id = null) {
-            const modal = document.getElementById('freightModal');
-            const form = document.getElementById('freightForm');
-            const createdByInput = document.getElementById('formCreatedBy');
-            
-            form.reset();
-            document.getElementById('freightId').value = id || '';
-            createdByInput.value = currentUser;
+        async function saveFlete(event) {
+            event.preventDefault();
+            const user = getCurrentUser();
 
-            const admin = isAdmin();
-            const adminFormSection = document.getElementById('adminFormSection');
-            
-            if (admin) {
-                adminFormSection.classList.remove('hidden');
-            } else {
-                adminFormSection.classList.add('hidden');
-            }
-
-            if (id) {
-                // Editing existing record
-                const item = freightsData.find(f => f.id === id);
-                if (item) {
-                    document.getElementById('modalTitle').textContent = "Editar Registro de Flete";
-                    
-                    // Set radio movement type
-                    const movementRadios = document.getElementsByName('movementType');
-                    for (let r of movementRadios) {
-                        r.checked = (r.value === (item.movementType || 'ENTRADA'));
-                    }
-
-                    document.getElementById('formDate').value = item.date || '';
-                    document.getElementById('formTime').value = item.time || '';
-                    document.getElementById('formTripNumber').value = item.tripNumber || '';
-                    document.getElementById('formInvoiceNumber').value = item.invoiceNumber || '';
-                    document.getElementById('formProduct').value = item.product || '';
-                    document.getElementById('formKilos').value = item.kilos || '';
-                    document.getElementById('formCreatedBy').value = item.createdBy || currentUser;
-                    document.getElementById('formTariff').value = item.tariff || '';
-                    document.getElementById('formPaymentStatus').value = item.paymentStatus || 'PENDIENTE';
-                    document.getElementById('formComments').value = item.comments || '';
-                }
-            } else {
-                // Creating new record
-                document.getElementById('modalTitle').textContent = "Cargar Nuevo Flete";
-                const now = new Date();
-                document.getElementById('formDate').value = now.toISOString().split('T')[0];
-                document.getElementById('formTime').value = now.toTimeString().slice(0,5);
-                document.getElementById('formPaymentStatus').value = 'PENDIENTE';
-                document.getElementById('formTariff').value = '';
-            }
-
-            modal.classList.remove('hidden');
-        };
-
-        window.closeFreightModal = function() {
-            document.getElementById('freightModal').classList.add('hidden');
-        };
-
-        // Save / Update Freight Record
-        window.handleFormSubmit = async function(e) {
-            e.preventDefault();
-            if (!authUser) return;
-
-            const saveBtn = document.getElementById('saveButton');
-            saveBtn.disabled = true;
-            saveBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Guardando...`;
-
-            const freightId = document.getElementById('freightId').value;
-            
-            // Get selected radio
-            let selectedMovement = 'ENTRADA';
-            const movementRadios = document.getElementsByName('movementType');
-            for (let r of movementRadios) {
-                if (r.checked) selectedMovement = r.value;
-            }
-
-            const data = {
-                movementType: selectedMovement,
-                date: document.getElementById('formDate').value,
-                time: document.getElementById('formTime').value,
-                tripNumber: document.getElementById('formTripNumber').value.trim(),
-                invoiceNumber: document.getElementById('formInvoiceNumber').value.trim(),
-                product: document.getElementById('formProduct').value.trim(),
-                kilos: parseFloat(document.getElementById('formKilos').value) || 0,
-                createdBy: document.getElementById('formCreatedBy').value,
-                comments: document.getElementById('formComments').value.trim(),
-                updatedAt: new Date().toISOString()
+            const fleteObj = {
+                fecha: document.getElementById('fecha').value,
+                hora: document.getElementById('hora').value,
+                movimiento: document.querySelector('input[name="movimiento"]:checked').value,
+                nroViaje: document.getElementById('nroViaje').value.trim(),
+                nroFactura: document.getElementById('nroFactura').value.trim() || '-',
+                producto: document.getElementById('producto').value.trim(),
+                comentario: document.getElementById('comentario').value.trim() || '-',
+                usuario: user,
+                tarifa: isAdmin() ? parseFloat(document.getElementById('tarifa').value) || 0 : 0,
+                estadoPago: isAdmin() ? document.getElementById('estadoPago').value : 'Pendiente'
             };
 
-            // Only update tariff/paymentStatus if current user is Admin
-            if (isAdmin()) {
-                data.tariff = parseFloat(document.getElementById('formTariff').value) || 0;
-                data.paymentStatus = document.getElementById('formPaymentStatus').value;
-            }
-
             try {
-                if (freightId) {
-                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'freights', freightId);
-                    await updateDoc(docRef, data);
-                    showToast("Flete actualizado correctamente");
-                } else {
-                    if (!isAdmin()) {
-                        data.tariff = 0;
-                        data.paymentStatus = 'PENDIENTE';
+                if (window.firebaseModules && db) {
+                    const { addDoc, collection, doc, updateDoc } = window.firebaseModules;
+                    if (editingId) {
+                        const docRef = doc(db, "fletes_nuevasemilla", editingId);
+                        await updateDoc(docRef, fleteObj);
+                    } else {
+                        await addDoc(collection(db, "fletes_nuevasemilla"), fleteObj);
                     }
-                    data.createdAt = new Date().toISOString();
-                    const freightsCollection = collection(db, 'artifacts', appId, 'public', 'data', 'freights');
-                    await addDoc(freightsCollection, data);
-                    showToast("Nuevo flete registrado con éxito");
+                } else {
+                    if (editingId) {
+                        const idx = fletesData.findIndex(f => f.id === editingId);
+                        if (idx !== -1) fletesData[idx] = { id: editingId, ...fleteObj };
+                    } else {
+                        fleteObj.id = Date.now().toString();
+                        fletesData.unshift(fleteObj);
+                    }
+                    saveLocalStorageFallback();
+                    renderFletes();
+                    updateKPIs();
                 }
-                closeFreightModal();
+
+                resetForm();
             } catch (error) {
-                console.error("Error saving document:", error);
-                showToast("Error al guardar el flete", "error");
-            } finally {
-                saveBtn.disabled = false;
-                saveBtn.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> <span>Guardar Flete</span>`;
+                console.error("Error al guardar:", error);
+                alert("Hubo un error al guardar el flete. Intentalo nuevamente.");
             }
-        };
-
-        // Delete Freight Record
-        window.deleteFreight = async function(id) {
-            if (!confirm("¿Está seguro de que desea eliminar este registro de flete?")) return;
-            if (!authUser) return;
-
-            try {
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'freights', id);
-                await deleteDoc(docRef);
-                showToast("Flete eliminado");
-            } catch (err) {
-                console.error("Error deleting:", err);
-                showToast("No se pudo eliminar el registro", "error");
-            }
-        };
-
-        // Filter and Search Logic
-        window.filterFreights = function() {
-            renderFreights();
-        };
-
-        window.clearFilters = function() {
-            document.getElementById('searchInput').value = '';
-            document.getElementById('filterMovement').value = 'ALL';
-            document.getElementById('filterDateFrom').value = '';
-            document.getElementById('filterDateTo').value = '';
-            document.getElementById('filterPaymentStatus').value = 'ALL';
-            renderFreights();
-        };
-
-        function getFilteredData() {
-            const search = document.getElementById('searchInput').value.toLowerCase();
-            const movement = document.getElementById('filterMovement').value;
-            const dateFrom = document.getElementById('filterDateFrom').value;
-            const dateTo = document.getElementById('filterDateTo').value;
-            const status = document.getElementById('filterPaymentStatus').value;
-
-            return freightsData.filter(item => {
-                const matchesMovement = movement === 'ALL' || (item.movementType || 'ENTRADA') === movement;
-
-                const matchesSearch = !search || 
-                    (item.product && item.product.toLowerCase().includes(search)) ||
-                    (item.tripNumber && item.tripNumber.toLowerCase().includes(search)) ||
-                    (item.invoiceNumber && item.invoiceNumber.toLowerCase().includes(search)) ||
-                    (item.createdBy && item.createdBy.toLowerCase().includes(search));
-
-                const matchesDateFrom = !dateFrom || item.date >= dateFrom;
-                const matchesDateTo = !dateTo || item.date <= dateTo;
-                const matchesStatus = status === 'ALL' || item.paymentStatus === status;
-
-                return matchesMovement && matchesSearch && matchesDateFrom && matchesDateTo && matchesStatus;
-            });
         }
 
-        // Export to Excel Function
-        window.exportToExcel = function() {
-            const dataToExport = getFilteredData();
-            if (dataToExport.length === 0) {
-                showToast("No hay datos para exportar con los filtros actuales", "error");
+        function resetForm() {
+            document.getElementById('fleteForm').reset();
+            document.getElementById('fleteId').value = '';
+            editingId = null;
+            document.getElementById('formTitleText').innerText = 'Cargar Nuevo Flete';
+            document.getElementById('submitBtn').innerText = 'Guardar Flete';
+            document.getElementById('cancelEditBtn').classList.add('hidden');
+            
+            document.getElementById('fecha').valueAsDate = new Date();
+            const now = new Date();
+            document.getElementById('hora').value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        }
+
+        function renderFletes() {
+            const tbody = document.getElementById('fletesTableBody');
+            const cardsContainer = document.getElementById('fletesCardsContainer');
+            const noData = document.getElementById('noDataMessage');
+            
+            tbody.innerHTML = '';
+            cardsContainer.innerHTML = '';
+
+            const textoFiltro = document.getElementById('filtroTexto').value.toLowerCase();
+            const fechaFiltro = document.getElementById('filtroFecha').value;
+            const movFiltro = document.getElementById('filtroMovimiento').value;
+
+            const filtered = fletesData.filter(item => {
+                const matchTexto = (item.nroViaje || '').toLowerCase().includes(textoFiltro) ||
+                                   (item.producto || '').toLowerCase().includes(textoFiltro) ||
+                                   (item.nroFactura || '').toLowerCase().includes(textoFiltro);
+                const matchFecha = fechaFiltro ? item.fecha === fechaFiltro : true;
+                const matchMov = movFiltro ? item.movimiento === movFiltro : true;
+                return matchTexto && matchFecha && matchMov;
+            });
+
+            if (filtered.length === 0) {
+                noData.classList.remove('hidden');
                 return;
+            } else {
+                noData.classList.add('hidden');
             }
 
-            const admin = isAdmin();
+            filtered.forEach(item => {
+                const movBadge = item.movimiento === 'Salida' 
+                    ? '<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-medium text-xs">Salida 📤</span>'
+                    : '<span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-medium text-xs">Entrada 📥</span>';
 
-            const formattedData = dataToExport.map(item => {
-                const row = {
-                    "Fecha": formatDate(item.date),
-                    "Hora": item.time || '',
-                    "Movimiento": item.movementType || 'ENTRADA',
-                    "N° Viaje": item.tripNumber || '',
-                    "Producto": item.product || '',
-                    "Kilos": item.kilos || 0,
-                    "N° Factura / Remito": item.invoiceNumber || '',
-                    "Cargado Por": item.createdBy || ''
-                };
+                // --- 1. RENDER PARA COMPUTADORA (TABLA) ---
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/80 transition text-sm";
 
-                // Exclusively include financial columns for Victoria and Mauricio
-                if (admin) {
-                    row["Tarifa ($)"] = item.tariff || 0;
-                    row["Estado Pago"] = item.paymentStatus || 'PENDIENTE';
+                let adminColsHtml = '';
+                if (isAdmin()) {
+                    const badgePago = item.estadoPago === 'Pagado'
+                        ? '<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-medium text-xs">Pagado ✅</span>'
+                        : '<span class="bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full font-medium text-xs">Pendiente ⏳</span>';
+                    
+                    adminColsHtml = `
+                        <td class="p-3 font-semibold text-emerald-700">$ ${(item.tarifa || 0).toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
+                        <td class="p-3">${badgePago}</td>
+                    `;
                 }
 
-                row["Detalle / Comentario"] = item.comments || '';
-                return row;
-            });
-
-            const worksheet = XLSX.utils.json_to_sheet(formattedData);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Fletes");
-
-            const max_cols = Object.keys(formattedData[0]).map(key => ({ wch: Math.max(key.length + 3, 15) }));
-            worksheet['!cols'] = max_cols;
-
-            const fileName = `Control_Fletes_NuevaSemilla_${new Date().toISOString().slice(0,10)}.xlsx`;
-            XLSX.writeFile(workbook, fileName);
-            showToast("Planilla Excel generada con éxito");
-        };
-
-        // Render Functions
-        function renderFreights() {
-            const items = getFilteredData();
-            const tableBody = document.getElementById('tableBody');
-            const cardContainer = document.getElementById('cardContainer');
-            const emptyState = document.getElementById('emptyState');
-            const admin = isAdmin();
-
-            // Toggle table header visibility for admin columns
-            document.querySelectorAll('.admin-col').forEach(el => {
-                if (admin) el.classList.remove('hidden');
-                else el.classList.add('hidden');
-            });
-
-            if (admin) {
-                updateKPIs(items);
-            }
-
-            if (items.length === 0) {
-                tableBody.innerHTML = '';
-                cardContainer.innerHTML = '';
-                emptyState.classList.remove('hidden');
-                return;
-            }
-
-            emptyState.classList.add('hidden');
-
-            // Desktop Table View Render
-            tableBody.innerHTML = items.map(item => {
-                const isPaid = item.paymentStatus === 'PAGADO';
-                const isEntry = (item.movementType || 'ENTRADA') === 'ENTRADA';
-
-                return `
-                    <tr class="hover:bg-slate-50/80 transition-colors">
-                        <td class="py-3 px-4 font-medium text-slate-800 whitespace-nowrap">
-                            <div>${formatDate(item.date)}</div>
-                            <div class="text-xs text-slate-400 font-normal"><i class="fa-regular fa-clock mr-1"></i>${item.time || '--:--'} hs</div>
-                        </td>
-                        <td class="py-3 px-4 whitespace-nowrap">
-                            ${isEntry ? 
-                                `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                    <i class="fa-solid fa-circle-down mr-1 text-emerald-600"></i> Entrada
-                                 </span>` : 
-                                `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
-                                    <i class="fa-solid fa-circle-up mr-1 text-blue-600"></i> Salida
-                                 </span>`
-                            }
-                        </td>
-                        <td class="py-3 px-4 font-bold text-brand-900 whitespace-nowrap">
-                            ${item.tripNumber || '-'}
-                        </td>
-                        <td class="py-3 px-4 font-semibold text-slate-700">
-                            ${item.product || '-'}
-                        </td>
-                        <td class="py-3 px-4 font-mono font-medium text-slate-800 whitespace-nowrap">
-                            ${item.kilos ? item.kilos.toLocaleString('es-AR') + ' kg' : '<span class="text-slate-300">-</span>'}
-                        </td>
-                        <td class="py-3 px-4 text-slate-600 font-mono text-xs whitespace-nowrap">
-                            ${item.invoiceNumber || '<span class="text-slate-300">S/N</span>'}
-                        </td>
-
-                        <!-- Financial Columns (Exclusively Victoria & Mauricio) -->
-                        ${admin ? `
-                            <td class="py-3 px-4 font-semibold font-mono text-slate-800 whitespace-nowrap">
-                                $ ${(item.tariff || 0).toLocaleString('es-AR', {minimumFractionDigits: 2})}
-                            </td>
-                            <td class="py-3 px-4 whitespace-nowrap">
-                                ${isPaid ? 
-                                    `<span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                        <i class="fa-solid fa-check mr-1.5 text-emerald-600"></i> Pagado
-                                     </span>` : 
-                                    `<span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
-                                        <i class="fa-solid fa-hourglass-half mr-1.5 text-amber-600"></i> Pendiente
-                                     </span>`
-                                }
-                            </td>
-                        ` : ''}
-
-                        <td class="py-3 px-4 whitespace-nowrap">
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
-                                <i class="fa-solid fa-user-tag text-slate-400 mr-1 text-[10px]"></i> ${item.createdBy || 'Desconocido'}
-                            </span>
-                        </td>
-                        <td class="py-3 px-4 text-xs text-slate-500 max-w-xs truncate" title="${item.comments || ''}">
-                            ${item.comments || '<span class="italic text-slate-300">Sin comentarios</span>'}
-                        </td>
-                        <td class="py-3 px-4 text-right whitespace-nowrap space-x-1">
-                            <button onclick="openFreightModal('${item.id}')" class="p-1.5 text-slate-500 hover:text-brand-700 hover:bg-slate-100 rounded-lg transition" title="Editar">
-                                <i class="fa-solid fa-pen-to-square"></i>
-                            </button>
-                            <button onclick="deleteFreight('${item.id}')" class="p-1.5 text-slate-500 hover:text-red-600 hover:bg-slate-100 rounded-lg transition" title="Eliminar">
-                                <i class="fa-solid fa-trash-can"></i>
-                            </button>
-                        </td>
-                    </tr>
+                tr.innerHTML = `
+                    <td class="p-3 text-slate-600">
+                        <div class="font-medium text-slate-800">${item.fecha}</div>
+                        <div class="text-[11px] text-slate-400">${item.hora} hs</div>
+                    </td>
+                    <td class="p-3">${movBadge}</td>
+                    <td class="p-3">
+                        <div class="font-bold text-slate-800">Viaje #${item.nroViaje}</div>
+                        <div class="text-[11px] text-slate-500">Remito: ${item.nroFactura}</div>
+                    </td>
+                    <td class="p-3 font-medium text-slate-700">${item.producto}</td>
+                    ${adminColsHtml}
+                    <td class="p-3 text-slate-600 font-medium">${item.usuario}</td>
+                    <td class="p-3 text-center">
+                        <div class="flex items-center justify-center gap-2">
+                            <button onclick="editFlete('${item.id}')" title="Editar" class="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition">✏️</button>
+                            <button onclick="deleteFlete('${item.id}')" title="Eliminar" class="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition">🗑️</button>
+                        </div>
+                    </td>
                 `;
-            }).join('');
+                tbody.appendChild(tr);
 
-            // Mobile Cards Render
-            cardContainer.innerHTML = items.map(item => {
-                const isPaid = item.paymentStatus === 'PAGADO';
-                const isEntry = (item.movementType || 'ENTRADA') === 'ENTRADA';
+                // --- 2. RENDER PARA CELULAR (TARJETAS) ---
+                const card = document.createElement('div');
+                card.className = "bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 text-sm";
 
-                return `
-                    <div class="p-4 space-y-3">
-                        <div class="flex items-center justify-between">
+                let adminCardHtml = '';
+                if (isAdmin()) {
+                    const badgePagoCard = item.estadoPago === 'Pagado'
+                        ? '<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-medium text-xs">Pagado ✅</span>'
+                        : '<span class="bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full font-medium text-xs">Pendiente ⏳</span>';
+                    
+                    adminCardHtml = `
+                        <div class="flex justify-between items-center pt-2 border-t border-slate-200 text-xs">
+                            <span class="text-slate-500 font-medium">Tarifa / Estado:</span>
                             <div class="flex items-center gap-2">
-                                ${isEntry ? 
-                                    `<span class="px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                        📥 Entrada
-                                     </span>` : 
-                                    `<span class="px-2 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
-                                        📤 Salida
-                                     </span>`
-                                }
-                                <span class="font-bold text-brand-900 text-base">Viaje N° ${item.tripNumber || '-'}</span>
+                                <span class="font-bold text-emerald-700">$ ${(item.tarifa || 0).toLocaleString('es-AR', {minimumFractionDigits: 2})}</span>
+                                ${badgePagoCard}
                             </div>
-
-                            ${admin ? (isPaid ? 
-                                `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-emerald-100 text-emerald-800">
-                                    <i class="fa-solid fa-check mr-1"></i> Pagado
-                                 </span>` : 
-                                `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-amber-100 text-amber-800">
-                                    <i class="fa-solid fa-clock mr-1"></i> Pendiente
-                                 </span>`
-                            ) : ''}
                         </div>
+                    `;
+                }
 
-                        <div class="grid grid-cols-2 gap-2 text-xs">
-                            <div>
-                                <span class="text-slate-400 block">Producto:</span>
-                                <span class="font-semibold text-slate-800">${item.product || '-'}</span>
-                            </div>
-                            <div>
-                                <span class="text-slate-400 block">Kilos:</span>
-                                <span class="font-mono font-bold text-slate-800">${item.kilos ? item.kilos.toLocaleString('es-AR') + ' kg' : '-'}</span>
-                            </div>
-                            <div>
-                                <span class="text-slate-400 block">Factura/Remito:</span>
-                                <span class="font-mono text-slate-700">${item.invoiceNumber || 'S/N'}</span>
-                            </div>
-                            <div>
-                                <span class="text-slate-400 block">Fecha/Hora:</span>
-                                <span class="text-slate-700 font-medium">${formatDate(item.date)} ${item.time || ''}</span>
-                            </div>
-                            <div class="col-span-2">
-                                <span class="text-slate-400 block">Cargado por:</span>
-                                <span class="text-slate-700 font-medium">${item.createdBy || 'Desconocido'}</span>
-                            </div>
-
-                            ${admin ? `
-                                <div class="col-span-2 pt-1 border-t border-slate-100 flex items-center justify-between text-sm">
-                                    <span class="text-slate-500 font-medium">Tarifa ($):</span>
-                                    <span class="font-bold font-mono text-brand-900">$ ${(item.tariff || 0).toLocaleString('es-AR', {minimumFractionDigits: 2})}</span>
-                                </div>
-                            ` : ''}
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="font-bold text-slate-900">Viaje #${item.nroViaje}</span>
+                            <span class="text-xs text-slate-400 block">${item.fecha} - ${item.hora} hs</span>
                         </div>
-
-                        ${item.comments ? `
-                            <div class="text-xs bg-slate-50 p-2 rounded-lg text-slate-600 italic">
-                                "${item.comments}"
-                            </div>
-                        ` : ''}
-
-                        <div class="pt-2 flex items-center justify-end space-x-2 border-t border-slate-100">
-                            <button onclick="openFreightModal('${item.id}')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition flex items-center gap-1">
-                                <i class="fa-solid fa-pen-to-square"></i> Editar
-                            </button>
-                            <button onclick="deleteFreight('${item.id}')" class="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition flex items-center gap-1">
-                                <i class="fa-solid fa-trash-can"></i> Eliminar
-                            </button>
+                        <div class="flex items-center gap-2">
+                            ${movBadge}
                         </div>
                     </div>
+                    <div class="grid grid-cols-2 gap-2 text-xs text-slate-600 pt-1">
+                        <div><span class="font-medium">Remito:</span> ${item.nroFactura}</div>
+                        <div><span class="font-medium">Producto:</span> ${item.producto}</div>
+                    </div>
+                    <div class="text-xs text-slate-500">
+                        <span class="font-medium">Cargado por:</span> ${item.usuario}
+                    </div>
+                    ${item.comentario && item.comentario !== '-' ? `<div class="text-xs bg-white p-2 rounded-lg border border-slate-200 text-slate-600"><span class="font-medium">Comentario:</span> ${item.comentario}</div>` : ''}
+                    ${adminCardHtml}
+                    <div class="flex justify-end gap-2 pt-2 border-t border-slate-200">
+                        <button onclick="editFlete('${item.id}')" class="px-3 py-1 bg-white border border-slate-300 text-slate-700 rounded-lg text-xs font-medium shadow-xs">Editar ✏️</button>
+                        <button onclick="deleteFlete('${item.id}')" class="px-3 py-1 bg-red-50 border border-red-200 text-red-600 rounded-lg text-xs font-medium shadow-xs">Eliminar 🗑️</button>
+                    </div>
                 `;
-            }).join('');
+                cardsContainer.appendChild(card);
+            });
         }
 
-        function updateKPIs(items) {
-            const totalKilos = items.reduce((acc, curr) => acc + (parseFloat(curr.kilos) || 0), 0);
-            const totalMonto = items.reduce((acc, curr) => acc + (parseFloat(curr.tariff) || 0), 0);
+        function updateKPIs() {
+            if (!isAdmin()) return;
+
+            const totalViajes = fletesData.length;
+            let montoTotal = 0;
+            let totalPagado = 0;
+            let totalPendiente = 0;
+
+            fletesData.forEach(item => {
+                const tarifa = parseFloat(item.tarifa) || 0;
+                montoTotal += tarifa;
+                if (item.estadoPago === 'Pagado') {
+                    totalPagado += tarifa;
+                } else {
+                    totalPendiente += tarifa;
+                }
+            });
+
+            document.getElementById('kpiTotalViajes').innerText = totalViajes;
+            document.getElementById('kpiMontoTotal').innerText = `$ ${montoTotal.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
+            document.getElementById('kpiTotalPagado').innerText = `$ ${totalPagado.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
+            document.getElementById('kpiTotalPendiente').innerText = `$ ${totalPendiente.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
+        }
+
+        function editFlete(id) {
+            const item = fletesData.find(f => f.id === id);
+            if (!item) return;
+
+            editingId = item.id;
+            document.getElementById('fecha').value = item.fecha;
+            document.getElementById('hora').value = item.hora;
+            document.getElementById('nroViaje').value = item.nroViaje;
+            document.getElementById('nroFactura').value = item.nroFactura;
+            document.getElementById('producto').value = item.producto;
+            document.getElementById('comentario').value = item.comentario;
             
-            const pagadosItems = items.filter(f => f.paymentStatus === 'PAGADO');
-            const totalPagado = pagadosItems.reduce((acc, curr) => acc + (parseFloat(curr.tariff) || 0), 0);
+            const radios = document.querySelectorAll('input[name="movimiento"]');
+            radios.forEach(r => {
+                if (r.value === item.movimiento) r.checked = true;
+            });
 
-            const pendientesItems = items.filter(f => f.paymentStatus !== 'PAGADO');
-            const totalPendiente = pendientesItems.reduce((acc, curr) => acc + (parseFloat(curr.tariff) || 0), 0);
+            if (isAdmin()) {
+                document.getElementById('tarifa').value = item.tarifa || '';
+                document.getElementById('estadoPago').value = item.estadoPago || 'Pendiente';
+            }
 
-            document.getElementById('kpiTotalKilos').textContent = `${totalKilos.toLocaleString('es-AR')} kg`;
-            document.getElementById('kpiTotalViajes').textContent = `${items.length} viajes registrados`;
+            document.getElementById('formTitleText').innerText = `Editando Viaje #${item.nroViaje}`;
+            document.getElementById('submitBtn').innerText = 'Actualizar Flete';
+            document.getElementById('cancelEditBtn').classList.remove('hidden');
 
-            document.getElementById('kpiMontoTotal').textContent = `$ ${totalMonto.toLocaleString('es-AR', {minimumFractionDigits: 0})}`;
-            document.getElementById('kpiPagados').textContent = `$ ${totalPagado.toLocaleString('es-AR', {minimumFractionDigits: 0})}`;
-            document.getElementById('kpiPagadosCount').textContent = `${pagadosItems.length} fletes pagados`;
-
-            document.getElementById('kpiPendientes').textContent = `$ ${totalPendiente.toLocaleString('es-AR', {minimumFractionDigits: 0})}`;
-            document.getElementById('kpiPendientesCount').textContent = `${pendientesItems.length} fletes pendientes`;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // Custom Logo Upload Handler
-        window.handleLogoUpload = function(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const customLogo = document.getElementById('customLogoImg');
-                    const defaultIcon = document.getElementById('defaultLogoIcon');
-                    customLogo.src = e.target.result;
-                    customLogo.classList.remove('hidden');
-                    defaultIcon.classList.add('hidden');
+        async function deleteFlete(id) {
+            if (confirm("¿Estás segura de que querés eliminar este registro de flete?")) {
+                try {
+                    if (window.firebaseModules && db) {
+                        const { doc, deleteDoc } = window.firebaseModules;
+                        await deleteDoc(doc(db, "fletes_nuevasemilla", id));
+                    } else {
+                        fletesData = fletesData.filter(f => f.id !== id);
+                        saveLocalStorageFallback();
+                        renderFletes();
+                        updateKPIs();
+                    }
+                } catch (error) {
+                    console.error("Error al eliminar:", error);
+                    alert("No se pudo eliminar el registro.");
+                }
+            }
+        }
+
+        function exportToExcel() {
+            const user = getCurrentUser();
+            const admin = isAdmin();
+
+            const dataToExport = fletesData.map(item => {
+                const base = {
+                    "Fecha": item.fecha,
+                    "Hora": item.hora,
+                    "Movimiento": item.movimiento,
+                    "N° Viaje": item.nroViaje,
+                    "N° Factura / Remito": item.nroFactura,
+                    "Producto": item.producto,
+                    "Comentario": item.comentario,
+                    "Cargado por": item.usuario
                 };
-                reader.readAsDataURL(file);
-            }
-        };
 
-        // Utility: Toast Notification
-        function showToast(message, type = "success") {
-            const toast = document.getElementById('toast');
-            const toastMsg = document.getElementById('toastMessage');
-            const toastIcon = document.getElementById('toastIcon');
+                if (admin) {
+                    base["Tarifa ($)"] = item.tarifa || 0;
+                    base["Estado de Pago"] = item.estadoPago || 'Pendiente';
+                }
 
-            toastMsg.textContent = message;
-            if (type === "error") {
-                toastIcon.className = "fa-solid fa-circle-xmark text-red-400 text-lg";
-            } else {
-                toastIcon.className = "fa-solid fa-circle-check text-emerald-400 text-lg";
-            }
+                return base;
+            });
 
-            toast.classList.remove('translate-y-20', 'opacity-0');
-            setTimeout(() => {
-                toast.classList.add('translate-y-20', 'opacity-0');
-            }, 3000);
+            const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Fletes Nueva Semilla");
+            XLSX.writeFile(workbook, `Fletes_NuevaSemilla_${new Date().toISOString().slice(0,10)}.xlsx`);
         }
-
-        // Utility: Format Date (YYYY-MM-DD -> DD/MM/YYYY)
-        function formatDate(dateStr) {
-            if (!dateStr) return '-';
-            const parts = dateStr.split('-');
-            if (parts.length === 3) {
-                return `${parts[2]}/${parts[1]}/${parts[0]}`;
-            }
-            return dateStr;
-        }
-
-        // Initialize App
-        window.addEventListener('DOMContentLoaded', () => {
-            initAuth();
-            applyUserPermissions();
-        });
     </script>
 </body>
 </html>
-```
