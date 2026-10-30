@@ -32,21 +32,10 @@
     <!-- SheetJS for Excel Export -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f8fafc;
-        }
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f5f9;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     </style>
 </head>
 <body class="text-slate-800 min-h-screen flex flex-col antialiased">
@@ -58,8 +47,8 @@
                 
                 <!-- Logo & Brand Title -->
                 <div class="flex items-center space-x-3">
-                    <div class="w-12 h-12 rounded-xl bg-white flex items-center justify-center font-bold text-xl shadow-inner border border-slate-200 overflow-hidden">
-                        <img src="1001762379.jpg" alt="Nueva Semilla" class="w-full h-full object-contain" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23166534%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><path d=%22M10 17h4V5H10z%22/><path d=%22M4 17h2v-4H4z%22/><path d=%22M18 17h2v-4h-2z%22/><path d=%22M2 17h2v2H2z%22/><path d=%22M20 17h2v2h-2z%22/><path d=%22M6 19a2 2 0 1 0 4 0a2 2 0 1 0 -4 0%22/><path d=%22M14 19a2 2 0 1 0 4 0a2 2 0 1 0 -4 0%22/></svg>';">
+                    <div class="w-12 h-12 rounded-xl bg-white flex items-center justify-center font-bold shadow-inner border border-slate-200 overflow-hidden">
+                        <img src="1001762379.jpg" alt="Nueva Semilla" class="w-full h-full object-contain">
                     </div>
                     <div>
                         <h1 class="text-lg sm:text-xl font-bold text-brand-900 tracking-tight leading-tight flex items-center gap-2">
@@ -144,13 +133,13 @@
         <!-- Action Bar & Filter Options -->
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-4">
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                <button onclick="openFreightModal()" class="bg-brand-700 hover:bg-brand-800 text-white font-medium px-5 py-2.5 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-sm">
+                <button onclick="openFreightModal()" class="bg-brand-700 hover:bg-brand-800 text-white font-medium px-5 py-2.5 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-sm cursor-pointer">
                     <i class="fa-solid fa-plus text-base"></i>
                     <span>Cargar Nuevo Flete</span>
                 </button>
 
                 <div class="flex flex-col sm:flex-row items-center gap-2">
-                    <button onclick="exportToExcel()" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2.5 rounded-xl shadow transition flex items-center justify-center gap-2 text-sm">
+                    <button onclick="exportToExcel()" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2.5 rounded-xl shadow transition flex items-center justify-center gap-2 text-sm cursor-pointer">
                         <i class="fa-solid fa-file-excel text-base"></i>
                         <span>Exportar a Excel</span>
                     </button>
@@ -189,7 +178,7 @@
                     </select>
                 </div>
                 <div class="col-span-2 sm:col-span-1 flex items-end">
-                    <button onclick="clearFilters()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium p-2 rounded-lg text-xs transition flex items-center justify-center gap-1.5">
+                    <button onclick="clearFilters()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium p-2 rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
                         <i class="fa-solid fa-filter-circle-xmark"></i>
                         <span>Limpiar Filtros</span>
                     </button>
@@ -219,7 +208,7 @@
                             <th class="py-3 px-4">Fecha/Hora</th>
                             <th class="py-3 px-4">Tipo Movimiento</th>
                             <th class="py-3 px-4">N° Viaje</th>
-                            <th class="py-3 px-4">Producto</th>
+                            <th class="py-3 px-4">Producto (Gluten/Germen)</th>
                             <th class="py-3 px-4">Kilos</th>
                             <th class="py-3 px-4">Remito</th>
                             <th class="py-3 px-4 admin-col hidden">Tarifa ($)</th>
@@ -246,7 +235,7 @@
                     <i class="fa-solid fa-truck-moving text-brand-500"></i>
                     <h3 id="modalTitle" class="font-bold text-base">Cargar Nuevo Flete</h3>
                 </div>
-                <button onclick="closeFreightModal()" class="text-slate-300 hover:text-white p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+                <button onclick="closeFreightModal()" class="text-slate-300 hover:text-white p-1 cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
 
             <form id="freightForm" onsubmit="handleFormSubmit(event)" class="p-6 overflow-y-auto custom-scrollbar space-y-4">
@@ -290,8 +279,8 @@
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Producto *</label>
-                        <input type="text" id="formProduct" required class="w-full border border-slate-300 rounded-lg p-2 text-sm outline-none">
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Producto (Gluten, Germen...) *</label>
+                        <input type="text" id="formProduct" placeholder="Ej. Gluten, Harina de germen..." required class="w-full border border-slate-300 rounded-lg p-2 text-sm outline-none">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">Kilos</label>
@@ -327,8 +316,8 @@
                 </div>
 
                 <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-3">
-                    <button type="button" onclick="closeFreightModal()" class="px-4 py-2 border rounded-xl text-slate-700 text-sm">Cancelar</button>
-                    <button type="submit" id="saveButton" class="px-5 py-2 bg-brand-700 text-white rounded-xl text-sm shadow">Guardar Flete</button>
+                    <button type="button" onclick="closeFreightModal()" class="px-4 py-2 border rounded-xl text-slate-700 text-sm cursor-pointer">Cancelar</button>
+                    <button type="submit" id="saveButton" class="px-5 py-2 bg-brand-700 text-white rounded-xl text-sm shadow cursor-pointer">Guardar Flete</button>
                 </div>
             </form>
         </div>
@@ -343,8 +332,8 @@
             <form onsubmit="verifyPassword(event)" class="space-y-3">
                 <input type="password" id="pwdInput" placeholder="Contraseña" required class="w-full text-center text-lg tracking-widest border rounded-xl p-2.5 outline-none">
                 <div class="flex gap-2">
-                    <button type="button" onclick="cancelUserSwitch()" class="w-1/2 py-2 border rounded-xl text-slate-600 text-sm">Cancelar</button>
-                    <button type="submit" class="w-1/2 py-2 bg-brand-700 text-white text-sm rounded-xl shadow">Ingresar</button>
+                    <button type="button" onclick="cancelUserSwitch()" class="w-1/2 py-2 border rounded-xl text-slate-600 text-sm cursor-pointer">Cancelar</button>
+                    <button type="submit" class="w-1/2 py-2 bg-brand-700 text-white text-sm rounded-xl shadow cursor-pointer">Ingresar</button>
                 </div>
             </form>
         </div>
@@ -356,7 +345,7 @@
         <span id="toastMessage" class="text-sm font-medium">Operación realizada con éxito</span>
     </div>
 
-    <!-- Firebase Script -->
+    <!-- Firebase Script & App Logic -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -399,7 +388,21 @@
                 freightsData.sort((a, b) => new Date(`${b.date}T${b.time}`) - new Date(`${a.date}T${a.time}`));
                 document.getElementById('loadingSpinner').classList.add('hidden');
                 renderFreights();
+            }, (error) => {
+                console.error("Error al leer datos:", error);
+                loadFallbackData();
             });
+        }
+
+        function loadFallbackData() {
+            const local = localStorage.getItem('ns_fletes_fallback');
+            if (local) freightsData = JSON.parse(local);
+            document.getElementById('loadingSpinner').classList.add('hidden');
+            renderFreights();
+        }
+
+        function saveFallbackData() {
+            localStorage.setItem('ns_fletes_fallback', JSON.stringify(freightsData));
         }
 
         function isAdmin(user = currentUser) {
@@ -479,7 +482,6 @@
 
         window.handleFormSubmit = async function(e) {
             e.preventDefault();
-            if (!authUser) return;
 
             const freightId = document.getElementById('freightId').value;
             let selectedMovement = 'ENTRADA';
@@ -500,25 +502,48 @@
             if (isAdmin()) {
                 data.tariff = parseFloat(document.getElementById('formTariff').value) || 0;
                 data.paymentStatus = document.getElementById('formPaymentStatus').value;
+            } else {
+                data.tariff = 0;
+                data.paymentStatus = 'PENDIENTE';
             }
 
             try {
-                if (freightId) {
-                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'freights', freightId), data);
-                    showToast("Flete actualizado");
+                if (authUser && db) {
+                    if (freightId) {
+                        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'freights', freightId), data);
+                    } else {
+                        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'freights'), data);
+                    }
                 } else {
-                    if (!isAdmin()) { data.tariff = 0; data.paymentStatus = 'PENDIENTE'; }
-                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'freights'), data);
-                    showToast("Flete registrado con éxito");
+                    // Modo local de respaldo por si falla la red
+                    if (freightId) {
+                        const idx = freightsData.findIndex(f => f.id === freightId);
+                        if (idx !== -1) freightsData[idx] = { id: freightId, ...data };
+                    } else {
+                        data.id = '_' + Math.random().toString(36).substr(2, 9);
+                        freightsData.unshift(data);
+                    }
+                    saveFallbackData();
+                    renderFreights();
                 }
+                showToast(freightId ? "Flete actualizado con éxito" : "Flete registrado con éxito");
                 closeFreightModal();
-            } catch (err) { showToast("Error al guardar", "error"); }
+            } catch (err) {
+                console.error("Error al guardar:", err);
+                showToast("Error al guardar el flete", "error");
+            }
         };
 
         window.deleteFreight = async function(id) {
-            if (!confirm("¿Eliminar este registro?")) return;
+            if (!confirm("¿Estás segura de eliminar este registro?")) return;
             try {
-                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'freights', id));
+                if (authUser && db) {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'freights', id));
+                } else {
+                    freightsData = freightsData.filter(f => f.id !== id);
+                    saveFallbackData();
+                    renderFreights();
+                }
                 showToast("Flete eliminado");
             } catch (err) { showToast("No se pudo eliminar", "error"); }
         };
@@ -542,7 +567,7 @@
 
             return freightsData.filter(item => {
                 const matchesMovement = movement === 'ALL' || (item.movementType || 'ENTRADA') === movement;
-                const matchesSearch = !search || (item.product?.toLowerCase().includes(search) || item.tripNumber?.toLowerCase().includes(search) || item.invoiceNumber?.toLowerCase().includes(search));
+                const matchesSearch = !search || (item.product?.toLowerCase().includes(search) || item.tripNumber?.toLowerCase().includes(search) || item.invoiceNumber?.toLowerCase().includes(search) || item.createdBy?.toLowerCase().includes(search));
                 const matchesDateFrom = !dateFrom || item.date >= dateFrom;
                 const matchesDateTo = !dateTo || item.date <= dateTo;
                 const matchesStatus = status === 'ALL' || item.paymentStatus === status;
@@ -595,8 +620,8 @@
                     <td class="py-3 px-4"><span class="px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-700">${i.createdBy}</span></td>
                     <td class="py-3 px-4 text-xs text-slate-500 truncate max-w-xs">${i.comments || '-'}</td>
                     <td class="py-3 px-4 text-right space-x-1">
-                        <button onclick="openFreightModal('${i.id}')" class="p-1.5 text-slate-500 hover:text-brand-700"><i class="fa-solid fa-pen-to-square"></i></button>
-                        <button onclick="deleteFreight('${i.id}')" class="p-1.5 text-slate-500 hover:text-red-600"><i class="fa-solid fa-trash-can"></i></button>
+                        <button onclick="openFreightModal('${i.id}')" class="p-1.5 text-slate-500 hover:text-brand-700 cursor-pointer"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="deleteFreight('${i.id}')" class="p-1.5 text-slate-500 hover:text-red-600 cursor-pointer"><i class="fa-solid fa-trash-can"></i></button>
                     </td>
                 </tr>
             `).join('');
@@ -615,8 +640,8 @@
                     </div>
                     ${admin ? `<div class="pt-2 border-t flex justify-between items-center text-xs font-semibold"><span class="text-slate-500">Tarifa: $ ${(i.tariff || 0).toLocaleString('es-AR')}</span><span>${i.paymentStatus}</span></div>` : ''}
                     <div class="pt-2 flex justify-end space-x-2 border-t">
-                        <button onclick="openFreightModal('${i.id}')" class="px-3 py-1 bg-slate-100 text-xs rounded">Editar</button>
-                        <button onclick="deleteFreight('${i.id}')" class="px-3 py-1 bg-red-50 text-red-600 text-xs rounded">Eliminar</button>
+                        <button onclick="openFreightModal('${i.id}')" class="px-3 py-1 bg-slate-100 text-xs rounded cursor-pointer">Editar</button>
+                        <button onclick="deleteFreight('${i.id}')" class="px-3 py-1 bg-red-50 text-red-600 text-xs rounded cursor-pointer">Eliminar</button>
                     </div>
                 </div>
             `).join('');
