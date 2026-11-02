@@ -349,7 +349,7 @@
         <span id="toastMessage" class="text-sm font-medium">Operación realizada con éxito</span>
     </div>
 
-    <!-- Firebase Real SDK Connection -->
+    <!-- Firebase Real SDK Connection (Con `doc` incluido) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -380,7 +380,7 @@
             try {
                 const colRef = collection(db, 'freights');
                 onSnapshot(colRef, (snapshot) => {
-                    freightsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    freightsData = snapshot.docs.map(docItem => ({ id: docItem.id, ...docItem.data() }));
                     freightsData.sort((a, b) => new Date(`${b.date}T${b.time}`) - new Date(`${a.date}T${a.time}`));
                     renderFreights();
                 }, (error) => {
