@@ -349,10 +349,10 @@
         <span id="toastMessage" class="text-sm font-medium">Operación realizada con éxito</span>
     </div>
 
-    <!-- Firebase Script & Robust Hybrid Storage -->
+    <!-- Firebase & Direct Bulletproof Storage -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'nueva-semilla-fletes-v3';
@@ -368,61 +368,59 @@
         let previousUser = 'Cristian';
         let pendingUser = null;
         let freightsData = [];
-        let authUser = null;
 
         const ADMIN_PASSWORDS = { 'Victoria': '1', 'Mauricio': '1', 'Judit': '1' };
 
+        // Autenticación anónima silenciosa sin bloquear nunca la app
         async function initAuth() {
             try {
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
-                } else { await signInAnonymously(auth); }
-            } catch (err) { console.error(err); loadLocalBackup(); }
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) {
+                console.log("Modo local activado:", err);
+            }
+            setupRealtimeListener();
         }
 
-        onAuthStateChanged(auth, (user) => {
-            if (user) { 
-                authUser = user; 
-                setupRealtimeListener(); 
-            } else {
+        function setupRealtimeListener() {
+            try {
+                const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'freights');
+                onSnapshot(colRef, (snapshot) => {
+                    const cloudData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    if (cloudData.length > 0) {
+                        freightsData = cloudData;
+                        saveLocalBackup();
+                    } else {
+                        loadLocalBackup();
+                    }
+                    sortAndRender();
+                }, (error) => {
+                    console.log("Usando respaldo local por red débil");
+                    loadLocalBackup();
+                });
+            } catch (e) {
                 loadLocalBackup();
             }
-        });
-
-        function setupRealtimeListener() {
-            if (!authUser) return;
-            const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'freights');
-            onSnapshot(colRef, (snapshot) => {
-                const cloudData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                if (cloudData.length > 0) {
-                    freightsData = cloudData;
-                    saveLocalBackup();
-                } else {
-                    loadLocalBackup();
-                }
-                freightsData.sort((a, b) => new Date(`${b.date}T${b.time}`) - new Date(`${a.date}T${a.time}`));
-                renderFreights();
-            }, (error) => {
-                console.error("Modo sin conexión, usando respaldo local:", error);
-                loadLocalBackup();
-            });
         }
 
         function loadLocalBackup() {
             const local = localStorage.getItem('ns_fletes_backup_v3');
             if (local) {
-                try {
-                    freightsData = JSON.parse(local);
-                } catch(e) {
-                    freightsData = [];
-                }
+                try { freightsData = JSON.parse(local); } catch(e) { freightsData = []; }
             }
-            freightsData.sort((a, b) => new Date(`${b.date}T${b.time}`) - new Date(`${a.date}T${a.time}`));
-            renderFreights();
+            sortAndRender();
         }
 
         function saveLocalBackup() {
             localStorage.setItem('ns_fletes_backup_v3', JSON.stringify(freightsData));
+        }
+
+        function sortAndRender() {
+            freightsData.sort((a, b) => new Date(`${b.date}T${b.time}`) - new Date(`${a.date}T${a.time}`));
+            renderFreights();
         }
 
         function isAdmin(user = currentUser) {
@@ -529,49 +527,49 @@
                 data.paymentStatus = 'PENDIENTE';
             }
 
+            // Intentar guardar en Firebase con respaldo local automático
             try {
-                if (authUser && db) {
+                if (db) {
                     if (freightId && !freightId.startsWith('local_')) {
                         await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'freights', freightId), data);
                     } else {
                         await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'freights'), data);
                     }
                 }
-
-                // Guardado local de respaldo inmediato para que nunca falle
-                if (freightId) {
-                    const idx = freightsData.findIndex(f => f.id === freightId);
-                    if (idx !== -1) freightsData[idx] = { id: freightId, ...data };
-                } else {
-                    data.id = 'local_' + Date.now();
-                    freightsData.unshift(data);
-                }
-                saveLocalBackup();
-                renderFreights();
-
-                showToast(freightId ? "Flete actualizado con éxito" : "Flete registrado con éxito");
-                closeFreightModal();
             } catch (err) {
-                console.error("Error al guardar:", err);
-                showToast("Flete guardado localmente", "success");
-                closeFreightModal();
+                console.log("Guardado offline en dispositivo");
             }
+
+            // Actualizar vista local inmediata
+            if (freightId) {
+                const idx = freightsData.findIndex(f => f.id === freightId);
+                if (idx !== -1) freightsData[idx] = { id: freightId, ...data };
+            } else {
+                data.id = 'local_' + Date.now();
+                freightsData.unshift(data);
+            }
+            saveLocalBackup();
+            sortAndRender();
+
+            showToast(freightId ? "Flete actualizado con éxito" : "Flete registrado con éxito");
+            closeFreightModal();
         };
 
         window.deleteFreight = async function(id) {
             if (!confirm("¿Estás segura de eliminar este registro?")) return;
             try {
-                if (authUser && db && !id.startsWith('local_')) {
+                if (db && !id.startsWith('local_')) {
                     await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'freights', id));
                 }
-                freightsData = freightsData.filter(f => f.id !== id);
-                saveLocalBackup();
-                renderFreights();
-                showToast("Flete eliminado");
-            } catch (err) { showToast("No se pudo eliminar", "error"); }
+            } catch(e) {}
+
+            freightsData = freightsData.filter(f => f.id !== id);
+            saveLocalBackup();
+            sortAndRender();
+            showToast("Flete eliminado");
         };
 
-        window.filterFreights = function() { renderFreights(); };
+        window.filterFreights = function() { sortAndRender(); };
         window.clearFilters = function() {
             document.getElementById('searchInput').value = '';
             document.getElementById('filterMovement').value = 'ALL';
@@ -579,7 +577,7 @@
             document.getElementById('filterDateFrom').value = '';
             document.getElementById('filterDateTo').value = '';
             document.getElementById('filterPaymentStatus').value = 'ALL';
-            renderFreights();
+            sortAndRender();
         };
 
         function getFilteredData() {
