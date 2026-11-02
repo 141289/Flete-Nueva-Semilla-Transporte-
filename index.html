@@ -349,14 +349,20 @@
         <span id="toastMessage" class="text-sm font-medium">Operación realizada con éxito</span>
     </div>
 
-    <!-- Firebase Online Direct Realtime Sync -->
+    <!-- Firebase Real SDK Connection -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'nueva-semilla-fletes-v3';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-            apiKey: "demo-api-key", authDomain: "demo-app.firebaseapp.com", projectId: "demo-app"
+        // Tus credenciales reales de Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyBdqWmZYZFbQRpcaZ0DuYiggwPzClZae8s",
+            authDomain: "fletes-nueva-semilla.firebaseapp.com",
+            projectId: "fletes-nueva-semilla",
+            storageBucket: "fletes-nueva-semilla.firebasestorage.app",
+            messagingSenderId: "652917503751",
+            appId: "1:652917503751:web:a95714c761feb9d10777a2",
+            measurementId: "G-PKEMNST0N4"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -369,16 +375,16 @@
 
         const ADMIN_PASSWORDS = { 'Victoria': '1', 'Mauricio': '1', 'Judit': '1' };
 
-        // Conexión en tiempo real directa sin bloqueos de login
+        // Sincronización en tiempo real con tu base de datos Firestore
         function initRealtimeSync() {
             try {
-                const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'freights');
+                const colRef = collection(db, 'freights');
                 onSnapshot(colRef, (snapshot) => {
                     freightsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     freightsData.sort((a, b) => new Date(`${b.date}T${b.time}`) - new Date(`${a.date}T${a.time}`));
                     renderFreights();
                 }, (error) => {
-                    console.error("Error al sincronizar:", error);
+                    console.error("Error al sincronizar con tu base de datos:", error);
                 });
             } catch (err) {
                 console.error("Error de inicialización:", err);
@@ -492,16 +498,16 @@
             try {
                 if (db) {
                     if (freightId) {
-                        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'freights', freightId), data);
+                        await updateDoc(doc(db, 'freights', freightId), data);
                     } else {
-                        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'freights'), data);
+                        await addDoc(collection(db, 'freights'), data);
                     }
-                    showToast(freightId ? "Flete actualizado en línea" : "Flete guardado en línea");
+                    showToast(freightId ? "Flete actualizado en la nube" : "Flete guardado en la nube");
                     closeFreightModal();
                 }
             } catch (err) {
-                console.error("Error al guardar en la nube:", err);
-                showToast("Error al guardar en línea", "error");
+                console.error("Error al guardar en tu base de datos:", err);
+                showToast("Error al guardar en la nube", "error");
             }
         };
 
@@ -509,8 +515,8 @@
             if (!confirm("¿Estás segura de eliminar este registro?")) return;
             try {
                 if (db) {
-                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'freights', id));
-                    showToast("Flete eliminado de la nube");
+                    await deleteDoc(doc(db, 'freights', id));
+                    showToast("Flete eliminado");
                 }
             } catch (err) { 
                 showToast("No se pudo eliminar", "error"); 
