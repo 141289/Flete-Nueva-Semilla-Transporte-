@@ -61,7 +61,7 @@
                     </div>
                 </div>
 
-                <!-- User Selector (Predeterminado en Cristian) -->
+                <!-- User Selector (Predeterminado en Cristian con protección de contraseña para Admin) -->
                 <div class="flex items-center justify-between sm:justify-end gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200">
                     <div class="flex items-center space-x-2 w-full sm:w-auto">
                         <label for="currentUserSelect" class="text-xs font-semibold text-slate-600 uppercase tracking-wider pl-1 whitespace-nowrap">
@@ -358,7 +358,7 @@
         <span id="toastMessage" class="text-sm font-medium">Operación realizada con éxito</span>
     </div>
 
-    <!-- Firebase Script & App Logic with Excel Import -->
+    <!-- Firebase Script & App Logic with Admin Passwords & Excel Import -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -408,10 +408,10 @@
             });
         }
 
-        isAdmin = function(user = currentUser) {
+        function isAdmin(user = currentUser) {
             const u = user.toLowerCase();
             return u.includes('victoria') || u.includes('mauricio') || u.includes('judit');
-        };
+        }
 
         window.promptUserSwitch = function(targetUser) {
             if (ADMIN_PASSWORDS[targetUser]) {
@@ -434,7 +434,9 @@
                 document.getElementById('passwordModal').classList.add('hidden');
                 applyUserPermissions();
                 showToast(`Sesión iniciada como ${currentUser}`);
-            } else { showToast("Contraseña incorrecta", "error"); }
+            } else { 
+                showToast("Contraseña incorrecta", "error"); 
+            }
         };
 
         window.cancelUserSwitch = function() {
@@ -580,7 +582,7 @@
                     }
 
                     showToast(`¡Se importaron ${countImported} fletes con éxito!`);
-                    event.target.value = ''; // Limpiar input file
+                    event.target.value = '';
                 } catch (err) {
                     console.error("Error al importar Excel:", err);
                     showToast("Error al leer el archivo Excel", "error");
