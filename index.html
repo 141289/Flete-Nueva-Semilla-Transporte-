@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nueva Semilla Transporte S.A. - Control de Fletes</title>
+    <!-- Favicon con el Logo Oficial -->
+    <link rel="icon" type="image/jpeg" href="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -45,10 +47,10 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 
-                <!-- Brand Title & Icon -->
+                <!-- Brand Title & Logo Integration -->
                 <div class="flex items-center space-x-3">
-                    <div class="w-11 h-11 rounded-xl bg-brand-900 text-white flex items-center justify-center font-bold shadow-md text-xl">
-                        <i class="fa-solid fa-truck-fast"></i>
+                    <div class="w-12 h-12 rounded-xl bg-slate-900 flex items-center justify-center overflow-hidden shadow-md border border-slate-200">
+                        <img src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200" alt="Nueva Semilla Logo" class="w-full h-full object-cover">
                     </div>
                     <div>
                         <h1 class="text-base sm:text-lg font-bold text-brand-900 tracking-tight leading-tight flex items-center gap-2">
@@ -57,7 +59,7 @@
                                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse mr-1"></span> En Línea
                             </span>
                         </h1>
-                        <p class="text-xs text-slate-500">Control de Fletes y Logística</p>
+                        <p class="text-xs text-slate-500">Control de Fletes y Logística - Chacabuco</p>
                     </div>
                 </div>
 
@@ -349,12 +351,11 @@
         <span id="toastMessage" class="text-sm font-medium">Operación realizada con éxito</span>
     </div>
 
-    <!-- Firebase Real SDK Connection (Con `doc` incluido) -->
+    <!-- Firebase Real SDK Connection -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Tus credenciales reales de Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyBdqWmZYZFbQRpcaZ0DuYiggwPzClZae8s",
             authDomain: "fletes-nueva-semilla.firebaseapp.com",
@@ -375,7 +376,6 @@
 
         const ADMIN_PASSWORDS = { 'Victoria': '1', 'Mauricio': '1', 'Judit': '1' };
 
-        // Sincronización en tiempo real con tu base de datos Firestore
         function initRealtimeSync() {
             try {
                 const colRef = collection(db, 'freights');
