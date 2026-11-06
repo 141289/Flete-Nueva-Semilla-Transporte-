@@ -599,6 +599,8 @@
             const admin = isAdmin();
 
             document.querySelectorAll('.admin-col').forEach(el => el.classList.toggle('hidden', !admin));
+            
+            // Actualiza siempre las métricas basándose en la lista filtrada actual
             if (admin) updateKPIs(items);
 
             if (items.length === 0) {
@@ -614,9 +616,9 @@
                     <td class="py-3 px-4 font-bold text-brand-900">${i.tripNumber || '-'}</td>
                     <td class="py-3 px-4 font-mono font-semibold text-slate-700">${i.plate || '-'}</td>
                     <td class="py-3 px-4 font-semibold">${i.product || '-'}</td>
-                    <td class="py-3 px-4 font-mono">${i.kilos ? i.kilos.toLocaleString('es-AR') + ' kg' : '-'}</td>
+                    <td class="py-3 px-4 font-mono">${i.kilos ? Number(i.kilos).toLocaleString('es-AR') + ' kg' : '-'}</td>
                     <td class="py-3 px-4 font-mono text-xs">${i.invoiceNumber || 'S/N'}</td>
-                    ${admin ? `<td class="py-3 px-4 font-mono font-semibold">$ ${(i.tariff || 0).toLocaleString('es-AR', {minimumFractionDigits: 2})}</td><td class="py-3 px-4">${i.paymentStatus === 'PAGADO' ? '<span class="px-2 py-1 rounded text-xs bg-emerald-100 text-emerald-800 font-semibold">Pagado</span>' : '<span class="px-2 py-1 rounded text-xs bg-amber-100 text-amber-800 font-semibold">Pendiente</span>'}</td>` : ''}
+                    ${admin ? `<td class="py-3 px-4 font-mono font-semibold">$ ${(Number(i.tariff) || 0).toLocaleString('es-AR', {minimumFractionDigits: 2})}</td><td class="py-3 px-4">${i.paymentStatus === 'PAGADO' ? '<span class="px-2 py-1 rounded text-xs bg-emerald-100 text-emerald-800 font-semibold">Pagado</span>' : '<span class="px-2 py-1 rounded text-xs bg-amber-100 text-amber-800 font-semibold">Pendiente</span>'}</td>` : ''}
                     <td class="py-3 px-4"><span class="px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-700">${i.createdBy}</span></td>
                     <td class="py-3 px-4 text-xs text-slate-500 truncate max-w-xs">${i.comments || '-'}</td>
                     <td class="py-3 px-4 text-right space-x-1">
@@ -634,12 +636,12 @@
                     </div>
                     <div class="grid grid-cols-2 gap-2 text-xs text-slate-600">
                         <div>Producto: <span class="font-semibold text-slate-800">${i.product}</span></div>
-                        <div>Kilos: <span class="font-mono font-bold">${i.kilos ? i.kilos.toLocaleString('es-AR') + ' kg' : '-'}</span></div>
+                        <div>Kilos: <span class="font-mono font-bold">${i.kilos ? Number(i.kilos).toLocaleString('es-AR') + ' kg' : '-'}</span></div>
                         <div>Remito: <span class="font-mono">${i.invoiceNumber || 'S/N'}</span></div>
                         <div>Fecha: <span>${i.date}</span></div>
                         <div>Cargado por: <span class="font-semibold">${i.createdBy}</span></div>
                     </div>
-                    ${admin ? `<div class="pt-2 border-t flex justify-between items-center text-xs font-semibold"><span class="text-slate-500">Tarifa: $ ${(i.tariff || 0).toLocaleString('es-AR')}</span><span>${i.paymentStatus}</span></div>` : ''}
+                    ${admin ? `<div class="pt-2 border-t flex justify-between items-center text-xs font-semibold"><span class="text-slate-500">Tarifa: $ ${(Number(i.tariff) || 0).toLocaleString('es-AR')}</span><span>${i.paymentStatus}</span></div>` : ''}
                     <div class="pt-2 flex justify-end space-x-2 border-t">
                         <button onclick="openFreightModal('${i.id}')" class="px-3 py-1 bg-slate-100 text-xs rounded cursor-pointer">Editar</button>
                         <button onclick="deleteFreight('${i.id}')" class="px-3 py-1 bg-red-50 text-red-600 text-xs rounded cursor-pointer">Eliminar</button>
@@ -649,16 +651,38 @@
         }
 
         function updateKPIs(items) {
-            const totalKilos = items.reduce((acc, curr) => acc + (parseFloat(curr.kilos) || 0), 0);
-            const totalMonto = items.reduce((acc, curr) => acc + (parseFloat(curr.tariff) || 0), 0);
-            const pagados = items.filter(f => f.paymentStatus === 'PAGADO').reduce((acc, curr) => acc + (parseFloat(curr.tariff) || 0), 0);
-            const pendientes = items.filter(f => f.paymentStatus !== 'PAGADO').reduce((acc, curr) => acc + (parseFloat(curr.tariff) || 0), 0);
+            let totalKilos = 0;
+            let totalMonto = 0;
+            let pagadosMonto = 0;
+            let pendientesMonto = 0;
+            let pagadosCount = 0;
+            let pendientesCount = 0;
+
+            items.forEach(item => {
+                const k = Number(item.kilos) || 0;
+                const t = Number(item.tariff) || 0;
+                
+                totalKilos += k;
+                totalMonto += t;
+
+                if (item.paymentStatus === 'PAGADO') {
+                    pagadosMonto += t;
+                    pagadosCount++;
+                } else {
+                    pendientesMonto += t;
+                    pendientesCount++;
+                }
+            });
 
             document.getElementById('kpiTotalKilos').textContent = `${totalKilos.toLocaleString('es-AR')} kg`;
-            document.getElementById('kpiTotalViajes').textContent = `${items.length} viajes registrados`;
-            document.getElementById('kpiMontoTotal').textContent = `$ ${totalMonto.toLocaleString('es-AR')}`;
-            document.getElementById('kpiPagados').textContent = `$ ${pagados.toLocaleString('es-AR')}`;
-            document.getElementById('kpiPendientes').textContent = `$ ${pendientes.toLocaleString('es-AR')}`;
+            document.getElementById('kpiTotalViajes').textContent = `${items.length} viajes`;
+            document.getElementById('kpiMontoTotal').textContent = `$ ${totalMonto.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            
+            document.getElementById('kpiPagados').textContent = `$ ${pagadosMonto.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('kpiPagadosCount').textContent = `${pagadosCount} fletes pagados`;
+
+            document.getElementById('kpiPendientes').textContent = `$ ${pendientesMonto.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('kpiPendientesCount').textContent = `${pendientesCount} fletes pendientes`;
         }
 
         function showToast(msg, type = "success") {
