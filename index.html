@@ -46,7 +46,7 @@
     <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                
+
                 <!-- Brand Title & Logo Image -->
                 <div class="flex items-center space-x-3">
                     <div class="w-12 h-12 rounded-xl bg-slate-900 flex items-center justify-center overflow-hidden shadow-md border border-slate-200">
@@ -148,7 +148,7 @@
 
                     <div class="relative w-full sm:w-64">
                         <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                        <input type="text" id="searchInput" oninput="filterFreights()" placeholder="Buscar producto, viaje..." class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                        <input type="text" id="searchInput" oninput="filterFreights()" placeholder="Buscar producto, patente..." class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 outline-none">
                     </div>
                 </div>
             </div>
@@ -214,6 +214,7 @@
                             <th class="py-3 px-4">Fecha/Hora</th>
                             <th class="py-3 px-4">Tipo Movimiento</th>
                             <th class="py-3 px-4">N° Viaje</th>
+                            <th class="py-3 px-4">Patente</th>
                             <th class="py-3 px-4">Producto</th>
                             <th class="py-3 px-4">Kilos</th>
                             <th class="py-3 px-4">Remito</th>
@@ -246,6 +247,7 @@
 
             <form id="freightForm" onsubmit="handleFormSubmit(event)" class="p-5 overflow-y-auto custom-scrollbar space-y-3.5 text-sm">
                 <input type="hidden" id="freightId">
+                <input type="hidden" id="formOriginalCreatedBy">
 
                 <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Marcar Entrada o Salida *</label>
@@ -278,25 +280,31 @@
                         <input type="text" id="formTripNumber" required class="w-full border border-slate-300 rounded-lg p-2 text-xs sm:text-sm outline-none">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Remito / Factura</label>
-                        <input type="text" id="formInvoiceNumber" class="w-full border border-slate-300 rounded-lg p-2 text-xs sm:text-sm outline-none">
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Patente *</label>
+                        <input type="text" id="formPlate" placeholder="Ej: AB123CD" required class="w-full border border-slate-300 rounded-lg p-2 text-xs sm:text-sm uppercase outline-none font-mono">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Remito / Factura</label>
+                        <input type="text" id="formInvoiceNumber" class="w-full border border-slate-300 rounded-lg p-2 text-xs sm:text-sm outline-none">
+                    </div>
+                    <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">Producto *</label>
                         <input type="text" id="formProduct" placeholder="Gluten, Germen..." required class="w-full border border-slate-300 rounded-lg p-2 text-xs sm:text-sm outline-none">
                     </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">Kilos</label>
                         <input type="number" id="formKilos" step="1" class="w-full border border-slate-300 rounded-lg p-2 text-xs sm:text-sm outline-none">
                     </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1">Cargado Por</label>
-                    <input type="text" id="formCreatedBy" readonly class="w-full bg-slate-100 border border-slate-200 text-slate-500 rounded-lg p-2 text-xs sm:text-sm font-medium">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Cargado Por</label>
+                        <input type="text" id="formCreatedBy" readonly class="w-full bg-slate-100 border border-slate-200 text-slate-500 rounded-lg p-2 text-xs sm:text-sm font-medium">
+                    </div>
                 </div>
 
                 <div id="adminFormSection" class="hidden p-3 bg-amber-50/80 border border-amber-200 rounded-xl space-y-2.5">
@@ -438,7 +446,6 @@
             const form = document.getElementById('freightForm');
             form.reset();
             document.getElementById('freightId').value = id || '';
-            document.getElementById('formCreatedBy').value = currentUser;
             document.getElementById('adminFormSection').classList.toggle('hidden', !isAdmin());
 
             if (id) {
@@ -449,12 +456,17 @@
                     document.getElementById('formDate').value = item.date || '';
                     document.getElementById('formTime').value = item.time || '';
                     document.getElementById('formTripNumber').value = item.tripNumber || '';
+                    document.getElementById('formPlate').value = item.plate || '';
                     document.getElementById('formInvoiceNumber').value = item.invoiceNumber || '';
                     document.getElementById('formProduct').value = item.product || '';
                     document.getElementById('formKilos').value = item.kilos || '';
                     document.getElementById('formTariff').value = item.tariff || '';
                     document.getElementById('formPaymentStatus').value = item.paymentStatus || 'PENDIENTE';
                     document.getElementById('formComments').value = item.comments || '';
+                    
+                    // Guarda el creador original para que no se pise al editar
+                    document.getElementById('formOriginalCreatedBy').value = item.createdBy || currentUser;
+                    document.getElementById('formCreatedBy').value = item.createdBy || currentUser;
                 }
             } else {
                 document.getElementById('modalTitle').textContent = "Cargar Nuevo Flete";
@@ -462,6 +474,10 @@
                 document.getElementById('formDate').value = now.toISOString().split('T')[0];
                 document.getElementById('formTime').value = now.toTimeString().slice(0,5);
                 document.getElementById('formPaymentStatus').value = 'PENDIENTE';
+                
+                // Asigna el usuario actual como creador inicial
+                document.getElementById('formOriginalCreatedBy').value = currentUser;
+                document.getElementById('formCreatedBy').value = currentUser;
             }
             document.getElementById('freightModal').classList.remove('hidden');
         };
@@ -475,15 +491,20 @@
             let selectedMovement = 'ENTRADA';
             document.getElementsByName('movementType').forEach(r => { if (r.checked) selectedMovement = r.value; });
 
+            // Respeta el creador original si se está editando; si es nuevo, usa el usuario actual
+            const originalCreator = document.getElementById('formOriginalCreatedBy').value;
+            const assignedCreator = freightId ? (originalCreator || currentUser) : currentUser;
+
             const data = {
                 movementType: selectedMovement,
                 date: document.getElementById('formDate').value,
                 time: document.getElementById('formTime').value,
                 tripNumber: document.getElementById('formTripNumber').value.trim(),
+                plate: document.getElementById('formPlate').value.trim().toUpperCase(),
                 invoiceNumber: document.getElementById('formInvoiceNumber').value.trim(),
                 product: document.getElementById('formProduct').value.trim(),
                 kilos: parseFloat(document.getElementById('formKilos').value) || 0,
-                createdBy: document.getElementById('formCreatedBy').value,
+                createdBy: assignedCreator,
                 comments: document.getElementById('formComments').value.trim()
             };
 
@@ -545,7 +566,7 @@
             return freightsData.filter(item => {
                 const matchesMovement = movement === 'ALL' || (item.movementType || 'ENTRADA') === movement;
                 const matchesProduct = productFilter === 'ALL' || (item.product && item.product.toLowerCase().includes(productFilter.toLowerCase()));
-                const matchesSearch = !search || (item.product?.toLowerCase().includes(search) || item.tripNumber?.toLowerCase().includes(search) || item.invoiceNumber?.toLowerCase().includes(search) || item.createdBy?.toLowerCase().includes(search));
+                const matchesSearch = !search || (item.product?.toLowerCase().includes(search) || item.tripNumber?.toLowerCase().includes(search) || item.plate?.toLowerCase().includes(search) || item.invoiceNumber?.toLowerCase().includes(search) || item.createdBy?.toLowerCase().includes(search));
                 const matchesDateFrom = !dateFrom || item.date >= dateFrom;
                 const matchesDateTo = !dateTo || item.date <= dateTo;
                 const matchesStatus = status === 'ALL' || item.paymentStatus === status;
@@ -558,7 +579,7 @@
             if (items.length === 0) { showToast("No hay datos para exportar con los filtros seleccionados", "error"); return; }
             const admin = isAdmin();
             const formatted = items.map(i => {
-                const row = { "Fecha": i.date, "Hora": i.time, "Movimiento": i.movementType, "N° Viaje": i.tripNumber, "Producto": i.product, "Kilos": i.kilos, "Remito": i.invoiceNumber, "Cargado Por": i.createdBy };
+                const row = { "Fecha": i.date, "Hora": i.time, "Movimiento": i.movementType, "N° Viaje": i.tripNumber, "Patente": i.plate || '-', "Producto": i.product, "Kilos": i.kilos, "Remito": i.invoiceNumber, "Cargado Por": i.createdBy };
                 if (admin) { row["Tarifa ($)"] = i.tariff || 0; row["Estado Pago"] = i.paymentStatus; }
                 row["Comentarios"] = i.comments;
                 return row;
@@ -591,6 +612,7 @@
                     <td class="py-3 px-4 font-medium">${i.date}<br><span class="text-xs text-slate-400">${i.time || ''}</span></td>
                     <td class="py-3 px-4">${i.movementType === 'SALIDA' ? '<span class="px-2 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-800">📤 Salida</span>' : '<span class="px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-800">📥 Entrada</span>'}</td>
                     <td class="py-3 px-4 font-bold text-brand-900">${i.tripNumber || '-'}</td>
+                    <td class="py-3 px-4 font-mono font-semibold text-slate-700">${i.plate || '-'}</td>
                     <td class="py-3 px-4 font-semibold">${i.product || '-'}</td>
                     <td class="py-3 px-4 font-mono">${i.kilos ? i.kilos.toLocaleString('es-AR') + ' kg' : '-'}</td>
                     <td class="py-3 px-4 font-mono text-xs">${i.invoiceNumber || 'S/N'}</td>
@@ -607,7 +629,7 @@
             cardContainer.innerHTML = items.map(i => `
                 <div class="p-4 space-y-2 text-sm bg-white border border-slate-100 rounded-xl shadow-xs">
                     <div class="flex justify-between items-center">
-                        <span class="font-bold text-brand-900">Viaje N° ${i.tripNumber || '-'}</span>
+                        <span class="font-bold text-brand-900">Viaje N° ${i.tripNumber || '-'} <span class="font-mono text-xs text-slate-500 font-medium ml-1">(${i.plate || 'S/Patente'})</span></span>
                         ${i.movementType === 'SALIDA' ? '<span class="px-2 py-0.5 text-xs font-bold bg-blue-100 text-blue-800 rounded">📤 Salida</span>' : '<span class="px-2 py-0.5 text-xs font-bold bg-emerald-100 text-emerald-800 rounded">📥 Entrada</span>'}
                     </div>
                     <div class="grid grid-cols-2 gap-2 text-xs text-slate-600">
@@ -655,4 +677,3 @@
     </script>
 </body>
 </html>
-
