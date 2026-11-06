@@ -113,7 +113,7 @@
                 <div>
                     <p class="text-[11px] font-medium text-emerald-600 uppercase tracking-wider">Pagado</p>
                     <h3 id="kpiPagados" class="text-lg sm:text-xl font-bold text-emerald-700 mt-0.5">$ 0</h3>
-                    <p id="kpiPagadosCount" class="text-[10px] text-emerald-500">0 fletes</p>
+                    <p id="kpiPagadosCount" class="text-[10px] text-emerald-500">0 fletes pagados</p>
                 </div>
                 <div class="w-9 h-9 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-base">
                     <i class="fa-solid fa-circle-check"></i>
@@ -124,7 +124,7 @@
                 <div>
                     <p class="text-[11px] font-medium text-amber-600 uppercase tracking-wider">Pendiente</p>
                     <h3 id="kpiPendientes" class="text-lg sm:text-xl font-bold text-amber-700 mt-0.5">$ 0</h3>
-                    <p id="kpiPendientesCount" class="text-[10px] text-amber-500">0 fletes</p>
+                    <p id="kpiPendientesCount" class="text-[10px] text-amber-500">0 fletes pendientes</p>
                 </div>
                 <div class="w-9 h-9 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center text-base">
                     <i class="fa-solid fa-clock"></i>
@@ -460,13 +460,14 @@
                     document.getElementById('formInvoiceNumber').value = item.invoiceNumber || '';
                     document.getElementById('formProduct').value = item.product || '';
                     document.getElementById('formKilos').value = item.kilos || '';
-                    document.getElementById('formTariff').value = item.tariff || '';
+                    document.getElementById('formTariff').value = item.tariff !== undefined ? item.tariff : '';
                     document.getElementById('formPaymentStatus').value = item.paymentStatus || 'PENDIENTE';
                     document.getElementById('formComments').value = item.comments || '';
                     
-                    // Guarda el creador original para que no se pise al editar
-                    document.getElementById('formOriginalCreatedBy').value = item.createdBy || currentUser;
-                    document.getElementById('formCreatedBy').value = item.createdBy || currentUser;
+                    // Guarda el creador original y bloquea el campo visualmente
+                    const originalCreator = item.createdBy || currentUser;
+                    document.getElementById('formOriginalCreatedBy').value = originalCreator;
+                    document.getElementById('formCreatedBy').value = originalCreator;
                 }
             } else {
                 document.getElementById('modalTitle').textContent = "Cargar Nuevo Flete";
@@ -475,7 +476,7 @@
                 document.getElementById('formTime').value = now.toTimeString().slice(0,5);
                 document.getElementById('formPaymentStatus').value = 'PENDIENTE';
                 
-                // Asigna el usuario actual como creador inicial
+                // Si es nuevo, asigna el usuario actual
                 document.getElementById('formOriginalCreatedBy').value = currentUser;
                 document.getElementById('formCreatedBy').value = currentUser;
             }
@@ -491,7 +492,7 @@
             let selectedMovement = 'ENTRADA';
             document.getElementsByName('movementType').forEach(r => { if (r.checked) selectedMovement = r.value; });
 
-            // Respeta el creador original si se está editando; si es nuevo, usa el usuario actual
+            // BLINDAJE: Si se está editando, respeta el creador original registrado. Si es nuevo, usa el usuario actual.
             const originalCreator = document.getElementById('formOriginalCreatedBy').value;
             const assignedCreator = freightId ? (originalCreator || currentUser) : currentUser;
 
@@ -600,7 +601,6 @@
 
             document.querySelectorAll('.admin-col').forEach(el => el.classList.toggle('hidden', !admin));
             
-            // Actualiza siempre las métricas basándose en la lista filtrada actual
             if (admin) updateKPIs(items);
 
             if (items.length === 0) {
